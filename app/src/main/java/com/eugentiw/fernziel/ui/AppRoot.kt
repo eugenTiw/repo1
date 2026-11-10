@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 fun AppRoot(viewModel: AppViewModel) {
     val state by viewModel.state.collectAsState()
     val hideDone by viewModel.hideDone.collectAsState()
+    val collapsed by viewModel.collapsed.collectAsState()
     val c = LocalAppColors.current
 
     // Diese Zustände liegen bewusst hier oben, damit Seite und Scrollposition
@@ -128,6 +129,8 @@ fun AppRoot(viewModel: AppViewModel) {
                             state = state,
                             hideDone = hideDone,
                             scrollState = todayScroll,
+                            collapsed = collapsed,
+                            onToggleCollapsed = { key -> viewModel.toggleCollapsed(key) },
                             onToggleHideDone = { viewModel.toggleHideDone() },
                             onOpenHistory = { historyOpen = true },
                             onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },

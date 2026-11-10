@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +40,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,7 @@ import com.eugentiw.fernziel.R
 import com.eugentiw.fernziel.data.Goal
 import com.eugentiw.fernziel.data.GoalAction
 import com.eugentiw.fernziel.data.Period
+import com.eugentiw.fernziel.weekStartOf
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -63,6 +66,8 @@ fun TodayScreen(
     state: AppState,
     hideDone: Boolean,
     scrollState: ScrollState,
+    collapsed: Set<String>,
+    onToggleCollapsed: (String) -> Unit,
     onToggleHideDone: () -> Unit,
     onOpenHistory: () -> Unit,
     onToggleDone: (Long, Long) -> Unit,
@@ -137,33 +142,39 @@ fun TodayScreen(
                 EmptyState(onAddGoal)
             }
 
+            val weekOpen = !collapsed.contains("week")
+            val monthOpen = !collapsed.contains("month")
             if (weekly.isNotEmpty()) {
-                SectionHeader(stringResource(R.string.section_week))
-                Panel {
-                    weekly.forEachIndexed { index, pair ->
-                        key(pair.first.id) {
-                            if (index > 0) {
-                                Hairline()
+                CollapsibleHeader(stringResource(R.string.section_week), weekOpen) { onToggleCollapsed("week") }
+                if (weekOpen) {
+                    Panel {
+                        weekly.forEachIndexed { index, pair ->
+                            key(pair.first.id) {
+                                if (index > 0) {
+                                    Hairline()
+                                }
+                                AssignRow(state, pair.first, pair.second, onToggleDone, onTogglePlan)
                             }
-                            AssignRow(state, pair.first, pair.second, onToggleDone, onTogglePlan)
                         }
                     }
                 }
             }
             if (monthly.isNotEmpty()) {
-                SectionHeader(stringResource(R.string.section_month))
-                Panel {
-                    monthly.forEachIndexed { index, pair ->
-                        key(pair.first.id) {
-                            if (index > 0) {
-                                Hairline()
+                CollapsibleHeader(stringResource(R.string.section_month), monthOpen) { onToggleCollapsed("month") }
+                if (monthOpen) {
+                    Panel {
+                        monthly.forEachIndexed { index, pair ->
+                            key(pair.first.id) {
+                                if (index > 0) {
+                                    Hairline()
+                                }
+                                MonthAssignRow(state, pair.first, pair.second, onToggleDone, onTogglePlan)
                             }
-                            AssignRow(state, pair.first, pair.second, onToggleDone, onTogglePlan)
                         }
                     }
                 }
             }
-            if (weekly.isNotEmpty() || monthly.isNotEmpty()) {
+            if ((weekly.isNotEmpty() && weekOpen) || (monthly.isNotEmpty() && monthOpen)) {
                 Text(
                     stringResource(R.string.week_hint),
                     modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp),
@@ -450,6 +461,137 @@ private fun AssignRow(
                         }
                     },
                 )
+            }
+        }
+    }
+}
+
+/** Überschrift eines Abschnitts, der sich ein- und ausklappen lässt. */
+@Composable
+private fun CollapsibleHeader(text: String, expanded: Boolean, onClick: () -> Unit) {
+    val c = LocalAppColors.current
+    val chevronColor = c.textTertiary
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 20.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text.uppercase(),
+            modifier = Modifier.weight(1f),
+            style = AppType.overline,
+            color = c.textSecondary,
+        )
+        Canvas(Modifier.size(10.dp)) {
+            drawGlyph(if (expanded) Glyph.CHEVRON_DOWN else Glyph.CHEVRON_RIGHT, chevronColor)
+        }
+    }
+}
+
+/**
+ * Monatshandlung mit dem gesamten laufenden Monat zur Auswahl der Tage.
+ * Ist die Vorgabe des Monats erfüllt, wird der Titel durchgestrichen.
+ */
+@Composable
+private fun MonthAssignRow(
+    state: AppState,
+    action: GoalAction,
+    goal: Goal,
+    onToggleDone: (Long, Long) -> Unit,
+    onTogglePlan: (Long, Long) -> Unit,
+) {
+    val c = LocalAppColors.current
+    val doneCount = state.doneInPeriod(action)
+    val reached = doneCount >= action.times
+    val locale = Locale.getDefault()
+    val firstDay = state.monthStart
+    val lastDay = state.monthEnd
+    val weekStarts = remember(firstDay, lastDay) {
+        val list = ArrayList<Long>()
+        var start = weekStartOf(firstDay)
+        while (start <= lastDay) {
+            list.add(start)
+            start += 7
+        }
+        list
+    }
+
+    Column(Modifier.padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    action.title,
+                    style = AppType.body,
+                    color = if (reached) c.textSecondary else c.text,
+                    textDecoration = if (reached) TextDecoration.LineThrough else TextDecoration.None,
+                )
+                Text(
+                    goal.title + " · " + frequencyText(action.period, action.times),
+                    style = AppType.caption,
+                    color = c.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "$doneCount/${action.times}",
+                style = AppType.subhead,
+                fontWeight = FontWeight.Medium,
+                color = if (reached) c.accent else c.textSecondary,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth()) {
+            for (i in 0..6) {
+                Text(
+                    DayOfWeek.of(i + 1).getDisplayName(JavaTextStyle.NARROW, locale),
+                    modifier = Modifier.weight(1f),
+                    style = AppType.caption,
+                    color = c.textSecondary,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        weekStarts.forEach { weekStart ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                for (i in 0..6) {
+                    val day = weekStart + i
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        if (day >= firstDay && day <= lastDay) {
+                            val done = state.isDone(action.id, day)
+                            val planned = state.isPlanned(action.id, day)
+                            val past = day < state.today
+                            DayChip(
+                                label = (day - firstDay + 1).toString(),
+                                description = formatDay(day),
+                                dayState = if (done) DayState.DONE else if (planned) DayState.PLANNED else DayState.NONE,
+                                isToday = day == state.today,
+                                dimmed = past,
+                                enabled = past || !done,
+                                onClick = {
+                                    if (past) {
+                                        onToggleDone(action.id, day)
+                                    } else {
+                                        onTogglePlan(action.id, day)
+                                    }
+                                },
+                            )
+                        } else {
+                            Spacer(Modifier.size(34.dp))
+                        }
+                    }
+                }
             }
         }
     }

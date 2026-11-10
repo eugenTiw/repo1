@@ -233,7 +233,7 @@ private fun MonthCalendar(
         }
         list
     }
-    val showWeeks = history.action.period == Period.WEEKLY
+    val showWeeks = history.action.period != Period.MONTHLY
     val summary = history.monthSummary(month)
     val doneLabel = stringResource(R.string.done)
     val missedLabel = stringResource(R.string.mark_missed)

@@ -40,10 +40,20 @@ class ActionHistory(
         return if (missed) Mark.MISSED else Mark.NONE
     }
 
-    /** Woche (ab Montag [weekStart]): nur für wöchentliche Handlungen bewertet. */
+    /**
+     * Woche (ab Montag [weekStart]). Wöchentliche Handlung: Vorgabe erfüllt oder verpasst.
+     * Tägliche Handlung: geschafft, wenn an jedem verfolgten Tag der Woche erledigt
+     * (verpasste Tage sind dort bereits einzeln rot markiert).
+     */
     fun weekMark(weekStart: Long): Mark {
-        if (action.period != Period.WEEKLY) return Mark.NONE
         val weekEnd = weekStart + 6
+        if (action.period == Period.DAILY) {
+            val from = maxOf(weekStart, action.createdDay)
+            if (from > weekEnd) return Mark.NONE
+            val tracked = (weekEnd - from + 1).toInt()
+            return if (doneBetween(from, weekEnd) >= tracked) Mark.DONE else Mark.NONE
+        }
+        if (action.period != Period.WEEKLY) return Mark.NONE
         if (doneBetween(weekStart, weekEnd) >= action.times) return Mark.DONE
         val missed = weekEnd < today && weekStart >= action.createdDay
         return if (missed) Mark.MISSED else Mark.NONE

@@ -30,6 +30,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _hideDone = MutableStateFlow(prefs.getBoolean("hide_done", false))
     val hideDone: StateFlow<Boolean> = _hideDone.asStateFlow()
 
+    // Eingeklappte Abschnitte der Heute-Seite ("week", "month").
+    private val _collapsed = MutableStateFlow<Set<String>>(
+        HashSet(prefs.getStringSet("collapsed", emptySet()) ?: emptySet())
+    )
+    val collapsed: StateFlow<Set<String>> = _collapsed.asStateFlow()
+
+    fun toggleCollapsed(key: String) {
+        val current = _collapsed.value
+        val next = if (current.contains(key)) current - key else current + key
+        _collapsed.value = next
+        prefs.edit().putStringSet("collapsed", HashSet(next)).apply()
+    }
+
     init {
         refresh()
     }
