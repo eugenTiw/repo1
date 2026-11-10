@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper
  * Lokale SQLite-Datenbank. Alle Daten liegen ausschließlich im privaten
  * App-Speicher des Geräts; es gibt keinerlei Netzwerkzugriff.
  */
-class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 2) {
+class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 3) {
 
     companion object {
         const val COMPLETIONS = "completions"
@@ -39,7 +39,8 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 "period TEXT NOT NULL, " +
                 "times INTEGER NOT NULL, " +
                 "position INTEGER NOT NULL DEFAULT 0, " +
-                "created_day INTEGER NOT NULL DEFAULT 0)"
+                "created_day INTEGER NOT NULL DEFAULT 0, " +
+                "reminder_minutes INTEGER)"
         )
         db.execSQL(
             "CREATE TABLE completions(" +
@@ -53,6 +54,17 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 "day INTEGER NOT NULL, " +
                 "PRIMARY KEY(action_id, day))"
         )
+        createTodos(db)
+    }
+
+    private fun createTodos(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE todos(" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "title TEXT NOT NULL, " +
+                "day INTEGER NOT NULL, " +
+                "done INTEGER NOT NULL DEFAULT 0)"
+        )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -63,6 +75,11 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 "UPDATE actions SET created_day = " +
                     "(SELECT created_day FROM goals WHERE goals.id = actions.goal_id)"
             )
+        }
+        if (oldVersion < 3) {
+            // Version 3: eigene To-dos je Tag und freiwillige Erinnerung je Handlung.
+            createTodos(db)
+            db.execSQL("ALTER TABLE actions ADD COLUMN reminder_minutes INTEGER")
         }
     }
 
@@ -93,7 +110,7 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
     fun loadActions(): List<GoalAction> {
         val out = ArrayList<GoalAction>()
         readableDatabase.rawQuery(
-            "SELECT id, goal_id, title, period, times, position, created_day " +
+            "SELECT id, goal_id, title, period, times, position, created_day, reminder_minutes " +
                 "FROM actions ORDER BY goal_id, position, id",
             null,
         ).use { c ->
@@ -107,6 +124,7 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                         times = c.getInt(4),
                         position = c.getInt(5),
                         createdDay = c.getLong(6),
+                        reminderMinutes = if (c.isNull(7)) null else c.getInt(7),
                     )
                 )
             }
@@ -175,6 +193,7 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 v.put("period", action.period.name)
                 v.put("times", action.times)
                 v.put("position", index)
+                v.put("reminder_minutes", action.reminderMinutes)
                 if (action.id == 0L) {
                     v.put("created_day", action.createdDay)
                     db.insertOrThrow("actions", null, v)
@@ -198,6 +217,32 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
         val values = ContentValues()
         values.put("achieved_day", day)
         writableDatabase.update("goals", values, "id = ?", arrayOf(goalId.toString()))
+    }
+
+    fun loadTodos(): List<Todo> {
+        val out = ArrayList<Todo>()
+        readableDatabase.rawQuery("SELECT id, title, day, done FROM todos ORDER BY day, id", null).use { c ->
+            while (c.moveToNext()) {
+                out.add(Todo(id = c.getLong(0), title = c.getString(1), day = c.getLong(2), done = c.getInt(3) != 0))
+            }
+        }
+        return out
+    }
+
+    fun insertTodo(title: String, day: Long) {
+        val v = ContentValues()
+        v.put("title", title)
+        v.put("day", day)
+        v.put("done", 0)
+        writableDatabase.insertOrThrow("todos", null, v)
+    }
+
+    fun flipTodo(todoId: Long) {
+        writableDatabase.execSQL("UPDATE todos SET done = 1 - done WHERE id = $todoId")
+    }
+
+    fun removeTodo(todoId: Long) {
+        writableDatabase.delete("todos", "id = ?", arrayOf(todoId.toString()))
     }
 
     /** Schaltet eine Erledigung bzw. Planung für einen Tag um. */

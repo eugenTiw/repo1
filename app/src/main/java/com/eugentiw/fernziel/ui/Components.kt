@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,7 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -39,6 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -100,7 +104,7 @@ fun Hairline(startInset: Dp = 16.dp) {
 
 enum class Glyph {
     PLUS, MINUS, CLOSE, CHECK, CHECK_CIRCLE, TARGET,
-    EYE, EYE_OFF, CHEVRON_LEFT, CHEVRON_RIGHT, CHEVRON_DOWN,
+    EYE, EYE_OFF, CHEVRON_LEFT, CHEVRON_RIGHT, CHEVRON_DOWN, CALENDAR,
 }
 
 private fun checkPath(w: Float, h: Float): Path {
@@ -152,6 +156,19 @@ fun DrawScope.drawGlyph(glyph: Glyph, color: Color) {
             if (glyph == Glyph.EYE_OFF) {
                 drawLine(color, Offset(w * 0.14f, h * 0.10f), Offset(w * 0.86f, h * 0.90f), strokeWidth = w * 0.08f, cap = StrokeCap.Round)
             }
+        }
+        Glyph.CALENDAR -> {
+            val line = w * 0.08f
+            drawRoundRect(
+                color,
+                topLeft = Offset(w * 0.10f, h * 0.18f),
+                size = Size(w * 0.80f, h * 0.72f),
+                cornerRadius = CornerRadius(w * 0.14f, w * 0.14f),
+                style = Stroke(width = line, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+            drawLine(color, Offset(w * 0.10f, h * 0.40f), Offset(w * 0.90f, h * 0.40f), strokeWidth = line)
+            drawLine(color, Offset(w * 0.32f, h * 0.07f), Offset(w * 0.32f, h * 0.26f), strokeWidth = line, cap = StrokeCap.Round)
+            drawLine(color, Offset(w * 0.68f, h * 0.07f), Offset(w * 0.68f, h * 0.26f), strokeWidth = line, cap = StrokeCap.Round)
         }
         Glyph.CHEVRON_LEFT -> {
             val p = Path()
@@ -223,6 +240,77 @@ fun CheckMark(done: Boolean) {
             val sw = 1.75.dp.toPx()
             drawCircle(ring, radius = size.minDimension / 2f - sw / 2f, style = Stroke(width = sw))
         }
+    }
+}
+
+/**
+ * Eine abhakbare Aufgabe. Erledigtes wird durchgestrichen und bleibt in der Liste.
+ * Mit [onRemove] erscheint rechts ein kleines Kreuz zum Entfernen.
+ */
+@Composable
+fun TaskRow(
+    title: String,
+    subtitle: String?,
+    done: Boolean,
+    enabled: Boolean,
+    onToggle: () -> Unit,
+    onRemove: (() -> Unit)? = null,
+    removeLabel: String = "",
+) {
+    val c = LocalAppColors.current
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .weight(1f)
+                .toggleable(
+                    value = done,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = { onToggle() },
+                )
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CheckMark(done)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = AppType.body,
+                    color = if (done || !enabled) c.textSecondary else c.text,
+                    textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = AppType.caption,
+                        color = c.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+        if (onRemove != null) {
+            GlyphButton(
+                glyph = Glyph.CLOSE,
+                label = removeLabel,
+                tint = c.textTertiary,
+                onClick = onRemove,
+                glyphSize = 12.dp,
+            )
+        }
+    }
+}
+
+/** Farbpunkt mit Beschriftung für Legenden. */
+@Composable
+fun LegendItem(color: Color, label: String) {
+    val c = LocalAppColors.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(10.dp)) { drawCircle(color) }
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = AppType.caption, color = c.textSecondary)
     }
 }
 

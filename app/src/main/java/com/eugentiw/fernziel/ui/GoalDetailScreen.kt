@@ -286,7 +286,7 @@ private fun MonthCalendar(
                                 description = when (mark) {
                                     Mark.DONE -> "$dateLabel, $doneLabel"
                                     Mark.MISSED -> "$dateLabel, $missedLabel"
-                                    Mark.NONE -> dateLabel
+                                    else -> dateLabel
                                 },
                                 mark = mark,
                                 isToday = day == today,
@@ -335,12 +335,12 @@ private fun CalendarDay(
     val fillColor = when (mark) {
         Mark.DONE -> c.success
         Mark.MISSED -> c.dangerSoft
-        Mark.NONE -> Color.Transparent
+        else -> Color.Transparent
     }
     val textColor = when (mark) {
         Mark.DONE -> c.onSuccess
         Mark.MISSED -> c.danger
-        Mark.NONE -> if (enabled) c.text else c.textTertiary
+        else -> if (enabled) c.text else c.textTertiary
     }
     val ringColor = if (isToday && mark == Mark.NONE) c.textTertiary else Color.Transparent
     Box(
@@ -424,12 +424,12 @@ private fun MonthPill(
     val fillColor = when (mark) {
         Mark.DONE -> c.success
         Mark.MISSED -> c.dangerSoft
-        Mark.NONE -> c.fill
+        else -> c.fill
     }
     val textColor = when (mark) {
         Mark.DONE -> c.onSuccess
         Mark.MISSED -> c.danger
-        Mark.NONE -> c.textSecondary
+        else -> c.textSecondary
     }
     Box(
         modifier

@@ -30,6 +30,7 @@ data class AppColors(
     val danger: Color,
     val dangerSoft: Color,
     val success: Color,
+    val successSoft: Color,
     val onSuccess: Color,
 )
 
@@ -48,6 +49,7 @@ private val LightColors = AppColors(
     danger = Color(0xFFC0392B),
     dangerSoft = Color(0xFFF8DFDB),
     success = Color(0xFF3A9B63),
+    successSoft = Color(0xFFDCEFE3),
     onSuccess = Color(0xFFFFFFFF),
 )
 
@@ -66,6 +68,7 @@ private val DarkColors = AppColors(
     danger = Color(0xFFFF6B5E),
     dangerSoft = Color(0xFF3A1F1C),
     success = Color(0xFF4FBF7F),
+    successSoft = Color(0xFF1E3A2A),
     onSuccess = Color(0xFF0C1F14),
 )
 

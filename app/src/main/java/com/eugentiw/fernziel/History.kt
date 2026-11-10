@@ -13,8 +13,8 @@ fun weekStartOf(day: Long): Long =
         .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         .toEpochDay()
 
-/** Bewertung eines Zeitraums: offen, geschafft oder verpasst. */
-enum class Mark { NONE, DONE, MISSED }
+/** Bewertung eines Zeitraums: offen, geschafft, teilweise geschafft oder verpasst. */
+enum class Mark { NONE, DONE, PARTIAL, MISSED }
 
 /**
  * Wertet den Verlauf einer Handlung aus.

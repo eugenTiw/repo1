@@ -1,5 +1,6 @@
 package com.eugentiw.fernziel.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
@@ -13,11 +14,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -26,15 +31,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eugentiw.fernziel.AppState
 import com.eugentiw.fernziel.R
-import com.eugentiw.fernziel.TodayItem
 import com.eugentiw.fernziel.data.Goal
 import com.eugentiw.fernziel.data.GoalAction
 import com.eugentiw.fernziel.data.Period
@@ -46,8 +55,8 @@ import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 
 /**
- * Übersicht der laufenden Woche: Wochenhandlungen zum Zuteilen, darunter jeder Tag
- * mit seinen To-dos, am Ende die Monatshandlungen.
+ * Übersicht der laufenden Woche: oben die Wochen- und Monatshandlungen zum Zuteilen,
+ * darunter jeder Tag mit seinen Aufgaben und eigenen To-dos.
  */
 @Composable
 fun TodayScreen(
@@ -55,44 +64,52 @@ fun TodayScreen(
     hideDone: Boolean,
     scrollState: ScrollState,
     onToggleHideDone: () -> Unit,
+    onOpenHistory: () -> Unit,
     onToggleDone: (Long, Long) -> Unit,
     onTogglePlan: (Long, Long) -> Unit,
+    onAddTodo: (String, Long) -> Unit,
+    onToggleTodo: (Long) -> Unit,
+    onDeleteTodo: (Long) -> Unit,
     onAddGoal: () -> Unit,
 ) {
     val c = LocalAppColors.current
     val today = state.today
     val locale = Locale.getDefault()
-    val weekly = state.activeActions.filter { it.first.period == Period.WEEKLY }
-    val monthly = state.activeActions.filter { it.first.period == Period.MONTHLY }
     val dateText = remember(today) {
         LocalDate.ofEpochDay(today).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
     }
     val shortDate = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT) }
 
+    // Handlungen, deren Vorgabe erfüllt ist, verschwinden bei durchgestrichenem Auge.
+    val weekly = state.activeActions.filter { pair ->
+        pair.first.period == Period.WEEKLY && !(hideDone && state.targetReached(pair.first))
+    }
+    val monthly = state.activeActions.filter { pair ->
+        pair.first.period == Period.MONTHLY && !(hideDone && state.targetReached(pair.first))
+    }
+
     // Vergangene Tage sind eingeklappt, bis man sie antippt.
     var expandedPast by remember(state.weekStart) { mutableStateOf(emptySet<Long>()) }
+    // Tag, für den gerade ein eigenes To-do eingegeben wird.
+    var addingDay by remember { mutableStateOf<Long?>(null) }
+
+    BackHandler(enabled = addingDay != null) { addingDay = null }
 
     Column(
         Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 32.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 32.dp)
     ) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    dateText.uppercase(),
-                    modifier = Modifier.padding(start = 4.dp),
-                    style = AppType.overline,
-                    color = c.textSecondary,
-                )
-                Text(
-                    stringResource(R.string.today_title),
-                    modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-                    style = AppType.largeTitle,
-                    color = c.text,
-                )
-            }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            GlyphButton(
+                glyph = Glyph.CALENDAR,
+                label = stringResource(R.string.open_history),
+                tint = c.textSecondary,
+                onClick = onOpenHistory,
+                glyphSize = 22.dp,
+            )
+            Spacer(Modifier.weight(1f))
             GlyphButton(
                 glyph = if (hideDone) Glyph.EYE_OFF else Glyph.EYE,
                 label = stringResource(if (hideDone) R.string.show_done else R.string.hide_done),
@@ -101,21 +118,52 @@ fun TodayScreen(
                 glyphSize = 24.dp,
             )
         }
+        Text(
+            dateText.uppercase(),
+            modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+            style = AppType.overline,
+            color = c.textSecondary,
+        )
+        Text(
+            stringResource(R.string.today_title),
+            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+            style = AppType.largeTitle,
+            color = c.text,
+        )
 
-        if (state.loaded && state.activeActions.isEmpty()) {
-            Spacer(Modifier.height(28.dp))
-            EmptyState(onAddGoal)
-        } else if (state.loaded) {
+        if (state.loaded) {
+            if (state.activeActions.isEmpty()) {
+                Spacer(Modifier.height(24.dp))
+                EmptyState(onAddGoal)
+            }
+
             if (weekly.isNotEmpty()) {
                 SectionHeader(stringResource(R.string.section_week))
                 Panel {
                     weekly.forEachIndexed { index, pair ->
-                        if (index > 0) {
-                            Hairline()
+                        key(pair.first.id) {
+                            if (index > 0) {
+                                Hairline()
+                            }
+                            AssignRow(state, pair.first, pair.second, onToggleDone, onTogglePlan)
                         }
-                        WeeklyRow(state, pair.first, pair.second, onToggleDone, onTogglePlan)
                     }
                 }
+            }
+            if (monthly.isNotEmpty()) {
+                SectionHeader(stringResource(R.string.section_month))
+                Panel {
+                    monthly.forEachIndexed { index, pair ->
+                        key(pair.first.id) {
+                            if (index > 0) {
+                                Hairline()
+                            }
+                            AssignRow(state, pair.first, pair.second, onToggleDone, onTogglePlan)
+                        }
+                    }
+                }
+            }
+            if (weekly.isNotEmpty() || monthly.isNotEmpty()) {
                 Text(
                     stringResource(R.string.week_hint),
                     modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp),
@@ -128,57 +176,78 @@ fun TodayScreen(
                 val day = state.weekStart + i
                 val isToday = day == today
                 val past = day < today
-                val all = state.itemsFor(day)
-                val visible = if (hideDone) all.filter { !it.done } else all
-                val expanded = !past || expandedPast.contains(day)
+                val items = state.itemsFor(day)
+                val ownTodos = state.todosFor(day)
+                val visibleItems = if (hideDone) items.filter { !it.done } else items
+                val visibleTodos = if (hideDone) ownTodos.filter { !it.done } else ownTodos
+                val total = items.size + ownTodos.size
+                val doneCount = items.count { it.done } + ownTodos.count { it.done }
+                val adding = addingDay == day
+                val expanded = !past || adding || expandedPast.contains(day)
                 val weekdayName = DayOfWeek.of(i + 1).getDisplayName(JavaTextStyle.FULL, locale)
 
                 DayHeader(
                     title = if (isToday) stringResource(R.string.today_title) + " · " + weekdayName else weekdayName,
                     date = LocalDate.ofEpochDay(day).format(shortDate),
-                    count = if (all.isNotEmpty()) "${all.count { it.done }}/${all.size}" else null,
+                    count = if (total > 0) "$doneCount/$total" else null,
                     isToday = isToday,
                     collapsible = past,
                     expanded = expanded,
                     onClick = {
                         expandedPast = if (expandedPast.contains(day)) expandedPast - day else expandedPast + day
                     },
+                    onAdd = { addingDay = day },
                 )
                 if (expanded) {
                     Panel {
-                        if (visible.isEmpty()) {
+                        if (visibleItems.isEmpty() && visibleTodos.isEmpty() && !adding) {
                             Text(
-                                stringResource(if (all.isEmpty()) R.string.nothing_planned else R.string.all_done),
+                                stringResource(if (total == 0) R.string.nothing_planned else R.string.all_done),
                                 modifier = Modifier.padding(16.dp),
                                 style = AppType.body,
                                 color = c.textSecondary,
                             )
-                        } else {
-                            visible.forEachIndexed { index, item ->
-                                key(item.action.id) {
-                                    if (index > 0) {
-                                        Hairline(startInset = 54.dp)
-                                    }
-                                    TodoRow(
-                                        item = item,
-                                        enabled = day <= today,
-                                        onToggle = { onToggleDone(item.action.id, day) },
-                                    )
+                        }
+                        visibleItems.forEachIndexed { index, item ->
+                            key("a" + item.action.id) {
+                                if (index > 0) {
+                                    Hairline(startInset = 54.dp)
                                 }
+                                TaskRow(
+                                    title = item.action.title,
+                                    subtitle = item.goal.title + " · " +
+                                        frequencyText(item.action.period, item.action.times),
+                                    done = item.done,
+                                    enabled = day <= today,
+                                    onToggle = { onToggleDone(item.action.id, day) },
+                                )
                             }
                         }
-                    }
-                }
-            }
-
-            if (monthly.isNotEmpty()) {
-                SectionHeader(stringResource(R.string.section_month))
-                Panel {
-                    monthly.forEachIndexed { index, pair ->
-                        if (index > 0) {
-                            Hairline()
+                        visibleTodos.forEachIndexed { index, todo ->
+                            key("t" + todo.id) {
+                                if (index > 0 || visibleItems.isNotEmpty()) {
+                                    Hairline(startInset = 54.dp)
+                                }
+                                TaskRow(
+                                    title = todo.title,
+                                    subtitle = null,
+                                    done = todo.done,
+                                    enabled = true,
+                                    onToggle = { onToggleTodo(todo.id) },
+                                    onRemove = { onDeleteTodo(todo.id) },
+                                    removeLabel = stringResource(R.string.remove_todo),
+                                )
+                            }
                         }
-                        MonthlyRow(state, pair.first, pair.second, onTogglePlan)
+                        if (adding) {
+                            if (visibleItems.isNotEmpty() || visibleTodos.isNotEmpty()) {
+                                Hairline(startInset = 54.dp)
+                            }
+                            NewTodoRow(
+                                onSubmit = { text -> onAddTodo(text, day) },
+                                onClose = { addingDay = null },
+                            )
+                        }
                     }
                 }
             }
@@ -186,7 +255,10 @@ fun TodayScreen(
     }
 }
 
-/** Kopfzeile eines Tages mit Datum und Zähler; vergangene Tage lassen sich auf- und zuklappen. */
+/**
+ * Kopfzeile eines Tages mit Datum, Zähler und Plus für ein eigenes To-do.
+ * Vergangene Tage lassen sich auf- und zuklappen.
+ */
 @Composable
 private fun DayHeader(
     title: String,
@@ -196,82 +268,125 @@ private fun DayHeader(
     collapsible: Boolean,
     expanded: Boolean,
     onClick: () -> Unit,
+    onAdd: () -> Unit,
 ) {
     val c = LocalAppColors.current
     val chevronColor = c.textTertiary
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(enabled = collapsible, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(top = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            title,
-            style = AppType.headline,
-            color = if (isToday) c.accent else if (collapsible) c.textSecondary else c.text,
-            maxLines = 1,
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            date,
-            modifier = Modifier.weight(1f),
-            style = AppType.caption,
-            color = c.textSecondary,
-            maxLines = 1,
-        )
-        if (count != null) {
-            Text(count, style = AppType.caption, fontWeight = FontWeight.Medium, color = c.textSecondary)
-        }
-        if (collapsible) {
+        Row(
+            Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(10.dp))
+                .clickable(enabled = collapsible, role = Role.Button, onClick = onClick)
+                .padding(horizontal = 4.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                title,
+                style = AppType.headline,
+                color = if (isToday) c.accent else if (collapsible) c.textSecondary else c.text,
+                maxLines = 1,
+            )
             Spacer(Modifier.width(8.dp))
-            Canvas(Modifier.size(10.dp)) {
-                drawGlyph(if (expanded) Glyph.CHEVRON_DOWN else Glyph.CHEVRON_RIGHT, chevronColor)
-            }
-        }
-    }
-}
-
-/** Ein To-do. Erledigtes wird durchgestrichen und bleibt in der Liste. */
-@Composable
-private fun TodoRow(item: TodayItem, enabled: Boolean, onToggle: () -> Unit) {
-    val c = LocalAppColors.current
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = item.done,
-                enabled = enabled,
-                role = Role.Checkbox,
-                onValueChange = { onToggle() },
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CheckMark(item.done)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
             Text(
-                item.action.title,
-                style = AppType.body,
-                color = if (item.done || !enabled) c.textSecondary else c.text,
-                textDecoration = if (item.done) TextDecoration.LineThrough else TextDecoration.None,
-            )
-            Text(
-                item.goal.title + " · " + frequencyText(item.action.period, item.action.times),
+                date,
+                modifier = Modifier.weight(1f),
                 style = AppType.caption,
                 color = c.textSecondary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
+            if (count != null) {
+                Text(count, style = AppType.caption, fontWeight = FontWeight.Medium, color = c.textSecondary)
+            }
+            if (collapsible) {
+                Spacer(Modifier.width(8.dp))
+                Canvas(Modifier.size(10.dp)) {
+                    drawGlyph(if (expanded) Glyph.CHEVRON_DOWN else Glyph.CHEVRON_RIGHT, chevronColor)
+                }
+            }
         }
+        GlyphButton(
+            glyph = Glyph.PLUS,
+            label = stringResource(R.string.add_todo),
+            tint = c.textSecondary,
+            onClick = onAdd,
+            glyphSize = 15.dp,
+        )
     }
 }
 
+/** Eingabezeile für ein eigenes To-do. Die Tastatur-Taste „Fertig" fügt es hinzu. */
 @Composable
-private fun WeeklyRow(
+private fun NewTodoRow(onSubmit: (String) -> Unit, onClose: () -> Unit) {
+    val c = LocalAppColors.current
+    var text by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CheckMark(false)
+        TextField(
+            value = text,
+            onValueChange = { text = it },
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(focusRequester),
+            textStyle = AppType.body.copy(color = c.text),
+            placeholder = {
+                Text(stringResource(R.string.new_todo_placeholder), style = AppType.body, color = c.textTertiary)
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    if (text.isBlank()) {
+                        onClose()
+                    } else {
+                        onSubmit(text)
+                        text = ""
+                    }
+                },
+            ),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                cursorColor = c.accent,
+            ),
+        )
+        GlyphButton(
+            glyph = Glyph.CLOSE,
+            label = stringResource(R.string.cancel),
+            tint = c.textTertiary,
+            onClick = onClose,
+            glyphSize = 12.dp,
+        )
+    }
+}
+
+/**
+ * Wochen- oder Monatshandlung zum Zuteilen auf die Tage der laufenden Woche.
+ * Ist die Vorgabe des Zeitraums erfüllt, wird der Titel durchgestrichen.
+ */
+@Composable
+private fun AssignRow(
     state: AppState,
     action: GoalAction,
     goal: Goal,
@@ -280,14 +395,20 @@ private fun WeeklyRow(
 ) {
     val c = LocalAppColors.current
     val doneCount = state.doneInPeriod(action)
+    val reached = doneCount >= action.times
     val locale = Locale.getDefault()
 
     Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(action.title, style = AppType.body, color = c.text)
                 Text(
-                    goal.title,
+                    action.title,
+                    style = AppType.body,
+                    color = if (reached) c.textSecondary else c.text,
+                    textDecoration = if (reached) TextDecoration.LineThrough else TextDecoration.None,
+                )
+                Text(
+                    goal.title + " · " + frequencyText(action.period, action.times),
                     style = AppType.caption,
                     color = c.textSecondary,
                     maxLines = 1,
@@ -299,7 +420,7 @@ private fun WeeklyRow(
                 "$doneCount/${action.times}",
                 style = AppType.subhead,
                 fontWeight = FontWeight.Medium,
-                color = if (doneCount >= action.times) c.accent else c.textSecondary,
+                color = if (reached) c.accent else c.textSecondary,
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -331,47 +452,5 @@ private fun WeeklyRow(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun MonthlyRow(
-    state: AppState,
-    action: GoalAction,
-    goal: Goal,
-    onTogglePlan: (Long, Long) -> Unit,
-) {
-    val c = LocalAppColors.current
-    val doneCount = state.doneInPeriod(action)
-    val doneToday = state.isDone(action.id, state.today)
-    val plannedToday = state.isPlanned(action.id, state.today)
-
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(action.title, style = AppType.body, color = c.text)
-            Text(
-                goal.title + " · " + doneCount + "/" + action.times,
-                style = AppType.caption,
-                color = if (doneCount >= action.times) c.accent else c.textSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Pill(
-            text = when {
-                doneToday -> stringResource(R.string.done)
-                plannedToday -> stringResource(R.string.planned)
-                else -> stringResource(R.string.plan_today)
-            },
-            active = doneToday || plannedToday,
-            enabled = !doneToday,
-            onClick = { onTogglePlan(action.id, state.today) },
-        )
     }
 }

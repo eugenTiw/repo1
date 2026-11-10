@@ -6,15 +6,13 @@
     <string name="tab_goals">Goals</string>
 
     <string name="today_title">Today</string>
-    <string name="section_week">Plan weekly actions</string>
+    <string name="section_week">This week</string>
     <string name="section_month">This month</string>
-    <string name="week_hint">Tap a day to plan the action for it. Past days can be ticked off afterwards.</string>
+    <string name="week_hint">Tap a day to plan the action for it. It then appears in that day’s tasks. Past days can be ticked off afterwards.</string>
     <string name="nothing_planned">Nothing planned.</string>
     <string name="all_done">All done.</string>
     <string name="hide_done">Hide completed</string>
     <string name="show_done">Show completed</string>
-    <string name="plan_today">Plan for today</string>
-    <string name="planned">Planned</string>
     <string name="done">Done</string>
 
     <string name="empty_title">No goals yet</string>
@@ -26,6 +24,36 @@
     <string name="section_achieved">Achieved</string>
     <string name="achieved_on">Achieved on %1$s</string>
     <string name="privacy_note">All data stays on this device. The app has no internet access.</string>
+
+    <string name="open_history">Open history</string>
+    <string name="history_title">History</string>
+    <string name="mode_day">Day</string>
+    <string name="mode_week">Week</string>
+    <string name="mode_month">Month</string>
+    <string name="legend_all">All</string>
+    <string name="legend_partial">Partly</string>
+    <string name="legend_none">None</string>
+    <string name="no_entries">No entries in this period.</string>
+    <string name="times_count">%1$d×</string>
+    <string name="own_todo">Own to-do</string>
+    <string name="own_todos">Own to-dos</string>
+    <string name="add_todo">Add to-do</string>
+    <string name="new_todo_placeholder">New to-do</string>
+    <string name="remove_todo">Remove to-do</string>
+
+    <string name="reminder">Reminder</string>
+    <string name="reminder_off">Off</string>
+    <string name="reminder_remove">No reminder</string>
+    <string name="reminder_desc_daily">Daily at the chosen time</string>
+    <string name="reminder_desc_weekly">Mondays: pick the days for the week</string>
+    <string name="reminder_desc_monthly">On the 1st: pick the days for the month</string>
+    <string name="notifications_blocked">Notifications are turned off for this app. You can allow them in the system settings.</string>
+    <string name="channel_reminders">Reminders</string>
+    <string name="notif_daily_text">Due today · %1$s</string>
+    <string name="notif_week_title">Plan your week</string>
+    <string name="notif_week_text">Pick the days for “%1$s” (%2$d× per week).</string>
+    <string name="notif_month_title">Plan your month</string>
+    <string name="notif_month_text">Pick the days for “%1$s” (%2$d× per month).</string>
 
     <string name="back">Back</string>
     <string name="edit">Edit</string>

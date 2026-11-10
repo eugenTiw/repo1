@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Wurzel der Oberfläche: zwei Seiten (Heute, Ziele), zwischen denen man wischen kann,
- * dazu die Monatsübersicht eines Ziels und der Ziel-Editor als eigene Ansichten.
+ * dazu Verlauf, Monatsübersicht eines Ziels und Ziel-Editor als eigene Ansichten.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -47,12 +47,13 @@ fun AppRoot(viewModel: AppViewModel) {
     val c = LocalAppColors.current
 
     // Diese Zustände liegen bewusst hier oben, damit Seite und Scrollposition
-    // erhalten bleiben, während Übersicht oder Editor geöffnet sind.
+    // erhalten bleiben, während eine andere Ansicht geöffnet ist.
     val pagerState = rememberPagerState(pageCount = { 2 })
     val todayScroll = rememberScrollState()
     val goalsScroll = rememberScrollState()
     val scope = rememberCoroutineScope()
 
+    var historyOpen by rememberSaveable { mutableStateOf(false) }
     var detailGoalId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editorOpen by rememberSaveable { mutableStateOf(false) }
     var editorGoalId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -98,6 +99,14 @@ fun AppRoot(viewModel: AppViewModel) {
                 onEdit = { openEditor(detailGoal.id) },
                 onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
             )
+        } else if (historyOpen) {
+            BackHandler { historyOpen = false }
+            HistoryScreen(
+                state = state,
+                onBack = { historyOpen = false },
+                onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
+                onToggleTodo = { todoId -> viewModel.toggleTodo(todoId) },
+            )
         } else {
             BackHandler(enabled = pagerState.currentPage != 0) {
                 scope.launch { pagerState.animateScrollToPage(0) }
@@ -120,8 +129,12 @@ fun AppRoot(viewModel: AppViewModel) {
                             hideDone = hideDone,
                             scrollState = todayScroll,
                             onToggleHideDone = { viewModel.toggleHideDone() },
+                            onOpenHistory = { historyOpen = true },
                             onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
                             onTogglePlan = { actionId, day -> viewModel.togglePlan(actionId, day) },
+                            onAddTodo = { title, day -> viewModel.addTodo(title, day) },
+                            onToggleTodo = { todoId -> viewModel.toggleTodo(todoId) },
+                            onDeleteTodo = { todoId -> viewModel.deleteTodo(todoId) },
                             onAddGoal = { openEditor(null) },
                         )
                     } else {

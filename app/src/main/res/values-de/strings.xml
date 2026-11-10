@@ -4,15 +4,13 @@
     <string name="tab_goals">Ziele</string>
 
     <string name="today_title">Heute</string>
-    <string name="section_week">Wochenhandlungen zuteilen</string>
+    <string name="section_week">Diese Woche</string>
     <string name="section_month">Diesen Monat</string>
-    <string name="week_hint">Tippe auf einen Tag, um die Handlung dafür einzuplanen. Vergangene Tage lassen sich nachträglich abhaken.</string>
+    <string name="week_hint">Tippe auf einen Tag, um die Handlung dafür einzuplanen. Sie erscheint dann in den Aufgaben des Tages. Vergangene Tage lassen sich nachträglich abhaken.</string>
     <string name="nothing_planned">Nichts eingeplant.</string>
     <string name="all_done">Alles erledigt.</string>
     <string name="hide_done">Erledigte ausblenden</string>
     <string name="show_done">Erledigte einblenden</string>
-    <string name="plan_today">Heute einplanen</string>
-    <string name="planned">Eingeplant</string>
     <string name="done">Erledigt</string>
 
     <string name="empty_title">Noch keine Ziele</string>
@@ -24,6 +22,36 @@
     <string name="section_achieved">Erreicht</string>
     <string name="achieved_on">Erreicht am %1$s</string>
     <string name="privacy_note">Alle Daten bleiben auf diesem Gerät. Die App hat keinen Internetzugriff.</string>
+
+    <string name="open_history">Verlauf öffnen</string>
+    <string name="history_title">Verlauf</string>
+    <string name="mode_day">Tag</string>
+    <string name="mode_week">Woche</string>
+    <string name="mode_month">Monat</string>
+    <string name="legend_all">Alles</string>
+    <string name="legend_partial">Teilweise</string>
+    <string name="legend_none">Nichts</string>
+    <string name="no_entries">Keine Einträge in diesem Zeitraum.</string>
+    <string name="times_count">%1$d×</string>
+    <string name="own_todo">Eigenes To-do</string>
+    <string name="own_todos">Eigene To-dos</string>
+    <string name="add_todo">To-do hinzufügen</string>
+    <string name="new_todo_placeholder">Neues To-do</string>
+    <string name="remove_todo">To-do entfernen</string>
+
+    <string name="reminder">Erinnerung</string>
+    <string name="reminder_off">Aus</string>
+    <string name="reminder_remove">Keine Erinnerung</string>
+    <string name="reminder_desc_daily">Täglich zur gewählten Uhrzeit</string>
+    <string name="reminder_desc_weekly">Montags: Tage für die Woche festlegen</string>
+    <string name="reminder_desc_monthly">Am Monatsersten: Tage für den Monat festlegen</string>
+    <string name="notifications_blocked">Benachrichtigungen sind für diese App ausgeschaltet. Du kannst sie in den Systemeinstellungen erlauben.</string>
+    <string name="channel_reminders">Erinnerungen</string>
+    <string name="notif_daily_text">Heute fällig · %1$s</string>
+    <string name="notif_week_title">Woche planen</string>
+    <string name="notif_week_text">Lege die Tage für „%1$s“ fest (%2$d× pro Woche).</string>
+    <string name="notif_month_title">Monat planen</string>
+    <string name="notif_month_text">Lege die Tage für „%1$s“ fest (%2$d× pro Monat).</string>
 
     <string name="back">Zurück</string>
     <string name="edit">Bearbeiten</string>

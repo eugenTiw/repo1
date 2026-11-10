@@ -1,5 +1,12 @@
 package com.eugentiw.fernziel.ui
 
+import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -19,7 +27,9 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -30,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,7 +55,15 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /** Bearbeitungsstand einer Handlung im Editor. */
-private class ActionDraft(val id: Long, val createdDay: Long, title: String, period: Period, times: Int) {
+private class ActionDraft(
+    val id: Long,
+    val createdDay: Long,
+    title: String,
+    period: Period,
+    times: Int,
+    reminder: Int?,
+) {
+    var reminder by mutableStateOf(reminder)
     var title by mutableStateOf(title)
     var period by mutableStateOf(period)
     var times by mutableIntStateOf(times)
@@ -71,16 +90,30 @@ fun GoalEditorScreen(
         val list = mutableStateListOf<ActionDraft>()
         if (existing != null) {
             state.actionsOf(existing.id).forEach { action ->
-                list.add(ActionDraft(action.id, action.createdDay, action.title, action.period, action.times))
+                list.add(ActionDraft(action.id, action.createdDay, action.title, action.period, action.times, action.reminderMinutes))
             }
         }
         if (list.isEmpty()) {
-            list.add(ActionDraft(0L, state.today, "", Period.DAILY, 1))
+            list.add(ActionDraft(0L, state.today, "", Period.DAILY, 1, null))
         }
         list
     }
     var showDatePicker by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+
+    // Freiwillige Erinnerungen: Android fragt beim ersten Einrichten nach der Erlaubnis.
+    val context = LocalContext.current
+    var notificationsAllowed by remember { mutableStateOf(notificationsEnabled(context)) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> notificationsAllowed = granted }
+    val requestNotifications: () -> Unit = {
+        val enabled = notificationsEnabled(context)
+        notificationsAllowed = enabled
+        if (!enabled && Build.VERSION.SDK_INT >= 33) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val canSave = goalTitle.isNotBlank()
     val save: () -> Unit = {
@@ -102,6 +135,7 @@ fun GoalEditorScreen(
                     period = draft.period,
                     times = if (draft.period == Period.DAILY) 1 else draft.times,
                     createdDay = draft.createdDay,
+                    reminderMinutes = draft.reminder,
                 )
             }
         onSave(goal, actions)
@@ -203,13 +237,18 @@ fun GoalEditorScreen(
                     if (index > 0) {
                         Spacer(Modifier.height(12.dp))
                     }
-                    ActionEditor(draft, onRemove = { drafts.remove(draft) })
+                    ActionEditor(
+                        draft = draft,
+                        notificationsAllowed = notificationsAllowed,
+                        onReminderSet = requestNotifications,
+                        onRemove = { drafts.remove(draft) },
+                    )
                 }
             }
             TextAction(
                 text = stringResource(R.string.add_action),
                 color = c.accent,
-                onClick = { drafts.add(ActionDraft(0L, state.today, "", Period.DAILY, 1)) },
+                onClick = { drafts.add(ActionDraft(0L, state.today, "", Period.DAILY, 1, null)) },
                 modifier = Modifier.padding(top = 4.dp),
             )
 
@@ -271,8 +310,15 @@ fun GoalEditorScreen(
 }
 
 @Composable
-private fun ActionEditor(draft: ActionDraft, onRemove: () -> Unit) {
+private fun ActionEditor(
+    draft: ActionDraft,
+    notificationsAllowed: Boolean,
+    onReminderSet: () -> Unit,
+    onRemove: () -> Unit,
+) {
     val c = LocalAppColors.current
+    var showTime by remember { mutableStateOf(false) }
+    val reminder = draft.reminder
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PlainField(
@@ -333,7 +379,97 @@ private fun ActionEditor(draft: ActionDraft, onRemove: () -> Unit) {
                 }
             }
         }
+        Hairline()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { showTime = true }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.reminder), style = AppType.body, color = c.text)
+                Text(
+                    stringResource(
+                        when (draft.period) {
+                            Period.DAILY -> R.string.reminder_desc_daily
+                            Period.WEEKLY -> R.string.reminder_desc_weekly
+                            else -> R.string.reminder_desc_monthly
+                        }
+                    ),
+                    style = AppType.caption,
+                    color = c.textSecondary,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                if (reminder != null) formatTime(reminder) else stringResource(R.string.reminder_off),
+                style = AppType.body,
+                color = if (reminder != null) c.accent else c.textSecondary,
+            )
+        }
+        if (reminder != null && !notificationsAllowed) {
+            Text(
+                stringResource(R.string.notifications_blocked),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                style = AppType.caption,
+                color = c.danger,
+            )
+        }
     }
+
+    if (showTime) {
+        TimeDialog(
+            initialMinutes = reminder,
+            onDismiss = { showTime = false },
+            onPick = { minutes ->
+                draft.reminder = minutes
+                showTime = false
+                onReminderSet()
+            },
+            onRemove = {
+                draft.reminder = null
+                showTime = false
+            },
+        )
+    }
+}
+
+/** Ob die App derzeit Benachrichtigungen anzeigen darf. */
+private fun notificationsEnabled(context: Context): Boolean {
+    val manager = context.getSystemService(NotificationManager::class.java)
+    return manager != null && manager.areNotificationsEnabled()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimeDialog(
+    initialMinutes: Int?,
+    onDismiss: () -> Unit,
+    onPick: (Int) -> Unit,
+    onRemove: () -> Unit,
+) {
+    val context = LocalContext.current
+    val initial = initialMinutes ?: 8 * 60
+    val pickerState = rememberTimePickerState(
+        initialHour = initial / 60,
+        initialMinute = initial % 60,
+        is24Hour = DateFormat.is24HourFormat(context),
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onPick(pickerState.hour * 60 + pickerState.minute) }) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { if (initialMinutes != null) onRemove() else onDismiss() }) {
+                Text(stringResource(if (initialMinutes != null) R.string.reminder_remove else R.string.cancel))
+            }
+        },
+        text = { TimePicker(state = pickerState) },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -27,6 +27,16 @@ data class GoalAction(
     val position: Int = 0,
     /** Tag, ab dem die Handlung verfolgt wird. Frühere Tage gelten nicht als verpasst. */
     val createdDay: Long = 0,
+    /** Uhrzeit der freiwilligen Erinnerung in Minuten seit Mitternacht, oder null. */
+    val reminderMinutes: Int? = null,
+)
+
+/** Eigenes To-do für einen bestimmten Tag, unabhängig von Zielen. */
+data class Todo(
+    val id: Long = 0,
+    val title: String,
+    val day: Long,
+    val done: Boolean = false,
 )
 
 /** Verknüpft eine Handlung mit einem Tag (erledigt oder eingeplant). */
