@@ -4,11 +4,13 @@
     <string name="tab_goals">Ziele</string>
 
     <string name="today_title">Heute</string>
-    <string name="section_week">Diese Woche</string>
-    <string name="section_todo">Heute zu erledigen</string>
+    <string name="section_week">Wochenhandlungen zuteilen</string>
     <string name="section_month">Diesen Monat</string>
     <string name="week_hint">Tippe auf einen Tag, um die Handlung dafür einzuplanen. Vergangene Tage lassen sich nachträglich abhaken.</string>
-    <string name="nothing_planned">Für heute ist nichts eingeplant.</string>
+    <string name="nothing_planned">Nichts eingeplant.</string>
+    <string name="all_done">Alles erledigt.</string>
+    <string name="hide_done">Erledigte ausblenden</string>
+    <string name="show_done">Erledigte einblenden</string>
     <string name="plan_today">Heute einplanen</string>
     <string name="planned">Eingeplant</string>
     <string name="done">Erledigt</string>
@@ -22,6 +24,19 @@
     <string name="section_achieved">Erreicht</string>
     <string name="achieved_on">Erreicht am %1$s</string>
     <string name="privacy_note">Alle Daten bleiben auf diesem Gerät. Die App hat keinen Internetzugriff.</string>
+
+    <string name="back">Zurück</string>
+    <string name="edit">Bearbeiten</string>
+    <string name="no_actions">Dieses Ziel hat noch keine Handlungen. Über „Bearbeiten“ kannst du welche hinzufügen.</string>
+    <string name="calendar_hint">Tippe auf einen Tag, um ihn als erledigt zu markieren oder die Markierung zu entfernen.</string>
+    <string name="prev_month">Voriger Monat</string>
+    <string name="next_month">Nächster Monat</string>
+    <string name="mark_missed">nicht erledigt</string>
+    <string name="summary_days">%1$d von %2$d Tagen erledigt</string>
+    <string name="summary_weeks">%1$d von %2$d Wochen geschafft</string>
+    <string name="summary_count">%1$d von %2$d Mal erledigt</string>
+    <string name="legend_done">Geschafft</string>
+    <string name="legend_missed">Nicht geschafft</string>
 
     <string name="new_goal">Neues Ziel</string>
     <string name="edit_goal">Ziel bearbeiten</string>

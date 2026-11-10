@@ -2,6 +2,7 @@ package com.eugentiw.fernziel.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,13 +14,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,16 +33,31 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.eugentiw.fernziel.AppViewModel
 import com.eugentiw.fernziel.R
+import kotlinx.coroutines.launch
 
-/** Wurzel der Oberfläche: zwei Reiter (Heute, Ziele) und der Ziel-Editor als eigene Ansicht. */
+/**
+ * Wurzel der Oberfläche: zwei Seiten (Heute, Ziele), zwischen denen man wischen kann,
+ * dazu die Monatsübersicht eines Ziels und der Ziel-Editor als eigene Ansichten.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppRoot(viewModel: AppViewModel) {
     val state by viewModel.state.collectAsState()
+    val hideDone by viewModel.hideDone.collectAsState()
     val c = LocalAppColors.current
 
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    // Diese Zustände liegen bewusst hier oben, damit Seite und Scrollposition
+    // erhalten bleiben, während Übersicht oder Editor geöffnet sind.
+    val pagerState = rememberPagerState(pageCount = { 2 })
+    val todayScroll = rememberScrollState()
+    val goalsScroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+
+    var detailGoalId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editorOpen by rememberSaveable { mutableStateOf(false) }
     var editorGoalId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    val detailGoal = state.goals.firstOrNull { it.id == detailGoalId }
 
     val openEditor: (Long?) -> Unit = { goalId ->
         editorGoalId = goalId
@@ -62,6 +81,7 @@ fun AppRoot(viewModel: AppViewModel) {
                 },
                 onDelete = { goalId ->
                     viewModel.deleteGoal(goalId)
+                    detailGoalId = null
                     editorOpen = false
                 },
                 onSetAchieved = { goalId, achieved ->
@@ -69,21 +89,37 @@ fun AppRoot(viewModel: AppViewModel) {
                     editorOpen = false
                 },
             )
+        } else if (detailGoal != null) {
+            BackHandler { detailGoalId = null }
+            GoalDetailScreen(
+                state = state,
+                goal = detailGoal,
+                onBack = { detailGoalId = null },
+                onEdit = { openEditor(detailGoal.id) },
+                onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
+            )
         } else {
-            BackHandler(enabled = tab != 0) { tab = 0 }
+            BackHandler(enabled = pagerState.currentPage != 0) {
+                scope.launch { pagerState.animateScrollToPage(0) }
+            }
             Column(
                 Modifier
                     .fillMaxSize()
                     .safeDrawingPadding()
             ) {
-                Box(
-                    Modifier
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    if (tab == 0) {
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                ) { page ->
+                    if (page == 0) {
                         TodayScreen(
                             state = state,
+                            hideDone = hideDone,
+                            scrollState = todayScroll,
+                            onToggleHideDone = { viewModel.toggleHideDone() },
                             onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
                             onTogglePlan = { actionId, day -> viewModel.togglePlan(actionId, day) },
                             onAddGoal = { openEditor(null) },
@@ -91,12 +127,16 @@ fun AppRoot(viewModel: AppViewModel) {
                     } else {
                         GoalsScreen(
                             state = state,
+                            scrollState = goalsScroll,
                             onAdd = { openEditor(null) },
-                            onOpen = { goalId -> openEditor(goalId) },
+                            onOpen = { goalId -> detailGoalId = goalId },
                         )
                     }
                 }
-                BottomBar(tab = tab, onSelect = { tab = it })
+                BottomBar(
+                    tab = pagerState.currentPage,
+                    onSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
+                )
             }
         }
     }

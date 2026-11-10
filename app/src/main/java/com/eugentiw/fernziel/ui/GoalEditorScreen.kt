@@ -44,7 +44,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /** Bearbeitungsstand einer Handlung im Editor. */
-private class ActionDraft(val id: Long, title: String, period: Period, times: Int) {
+private class ActionDraft(val id: Long, val createdDay: Long, title: String, period: Period, times: Int) {
     var title by mutableStateOf(title)
     var period by mutableStateOf(period)
     var times by mutableIntStateOf(times)
@@ -71,11 +71,11 @@ fun GoalEditorScreen(
         val list = mutableStateListOf<ActionDraft>()
         if (existing != null) {
             state.actionsOf(existing.id).forEach { action ->
-                list.add(ActionDraft(action.id, action.title, action.period, action.times))
+                list.add(ActionDraft(action.id, action.createdDay, action.title, action.period, action.times))
             }
         }
         if (list.isEmpty()) {
-            list.add(ActionDraft(0L, "", Period.DAILY, 1))
+            list.add(ActionDraft(0L, state.today, "", Period.DAILY, 1))
         }
         list
     }
@@ -101,6 +101,7 @@ fun GoalEditorScreen(
                     title = draft.title.trim(),
                     period = draft.period,
                     times = if (draft.period == Period.DAILY) 1 else draft.times,
+                    createdDay = draft.createdDay,
                 )
             }
         onSave(goal, actions)
@@ -208,7 +209,7 @@ fun GoalEditorScreen(
             TextAction(
                 text = stringResource(R.string.add_action),
                 color = c.accent,
-                onClick = { drafts.add(ActionDraft(0L, "", Period.DAILY, 1)) },
+                onClick = { drafts.add(ActionDraft(0L, state.today, "", Period.DAILY, 1)) },
                 modifier = Modifier.padding(top = 4.dp),
             )
 

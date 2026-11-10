@@ -25,6 +25,8 @@ data class GoalAction(
     val period: Period,
     val times: Int,
     val position: Int = 0,
+    /** Tag, ab dem die Handlung verfolgt wird. Frühere Tage gelten nicht als verpasst. */
+    val createdDay: Long = 0,
 )
 
 /** Verknüpft eine Handlung mit einem Tag (erledigt oder eingeplant). */

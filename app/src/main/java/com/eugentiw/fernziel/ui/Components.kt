@@ -98,7 +98,10 @@ fun Hairline(startInset: Dp = 16.dp) {
     )
 }
 
-enum class Glyph { PLUS, MINUS, CLOSE, CHECK_CIRCLE, TARGET }
+enum class Glyph {
+    PLUS, MINUS, CLOSE, CHECK, CHECK_CIRCLE, TARGET,
+    EYE, EYE_OFF, CHEVRON_LEFT, CHEVRON_RIGHT, CHEVRON_DOWN,
+}
 
 private fun checkPath(w: Float, h: Float): Path {
     val p = Path()
@@ -126,9 +129,50 @@ fun DrawScope.drawGlyph(glyph: Glyph, color: Color) {
             drawLine(color, Offset(w * 0.18f, h * 0.18f), Offset(w * 0.82f, h * 0.82f), strokeWidth = sw, cap = StrokeCap.Round)
             drawLine(color, Offset(w * 0.82f, h * 0.18f), Offset(w * 0.18f, h * 0.82f), strokeWidth = sw, cap = StrokeCap.Round)
         }
+        Glyph.CHECK -> {
+            val p = Path()
+            p.moveTo(w * 0.14f, h * 0.54f)
+            p.lineTo(w * 0.40f, h * 0.78f)
+            p.lineTo(w * 0.86f, h * 0.24f)
+            drawPath(p, color, style = Stroke(width = w * 0.14f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
         Glyph.CHECK_CIRCLE -> {
             drawCircle(color, radius = w / 2f - sw / 2f, style = stroke)
             drawPath(checkPath(w, h), color, style = stroke)
+        }
+        Glyph.EYE, Glyph.EYE_OFF -> {
+            val thin = Stroke(width = w * 0.08f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val p = Path()
+            p.moveTo(w * 0.05f, h * 0.5f)
+            p.cubicTo(w * 0.27f, h * 0.16f, w * 0.73f, h * 0.16f, w * 0.95f, h * 0.5f)
+            p.cubicTo(w * 0.73f, h * 0.84f, w * 0.27f, h * 0.84f, w * 0.05f, h * 0.5f)
+            p.close()
+            drawPath(p, color, style = thin)
+            drawCircle(color, radius = w * 0.14f, style = thin)
+            if (glyph == Glyph.EYE_OFF) {
+                drawLine(color, Offset(w * 0.14f, h * 0.10f), Offset(w * 0.86f, h * 0.90f), strokeWidth = w * 0.08f, cap = StrokeCap.Round)
+            }
+        }
+        Glyph.CHEVRON_LEFT -> {
+            val p = Path()
+            p.moveTo(w * 0.64f, h * 0.12f)
+            p.lineTo(w * 0.30f, h * 0.5f)
+            p.lineTo(w * 0.64f, h * 0.88f)
+            drawPath(p, color, style = Stroke(width = w * 0.13f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        Glyph.CHEVRON_RIGHT -> {
+            val p = Path()
+            p.moveTo(w * 0.36f, h * 0.12f)
+            p.lineTo(w * 0.70f, h * 0.5f)
+            p.lineTo(w * 0.36f, h * 0.88f)
+            drawPath(p, color, style = Stroke(width = w * 0.13f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        Glyph.CHEVRON_DOWN -> {
+            val p = Path()
+            p.moveTo(w * 0.12f, h * 0.36f)
+            p.lineTo(w * 0.5f, h * 0.70f)
+            p.lineTo(w * 0.88f, h * 0.36f)
+            drawPath(p, color, style = Stroke(width = w * 0.13f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         Glyph.TARGET -> {
             drawCircle(color, radius = w / 2f - sw / 2f, style = stroke)

@@ -7,9 +7,11 @@ Leitgedanke: **Deine Daten bleiben bei dir.** Die App arbeitet vollständig offl
 
 - **Ziele** mit Lebensbereich, optionalem Zieltermin und einem Kriterium („Erreicht, wenn …").
 - **Handlungen** je Ziel mit Häufigkeit: täglich, x-mal pro Woche oder x-mal pro Monat.
-- **Heute:** To-do-Liste für den Tag. Tägliche Handlungen erscheinen automatisch.
-- **Diese Woche:** Wochenhandlungen per Tipp einem Wochentag zuteilen; vergangene Tage lassen sich nachträglich abhaken.
+- **Heute:** die ganze Woche auf einen Blick, jeder Tag mit seinen To-dos. Tägliche Handlungen erscheinen automatisch; Erledigtes wird durchgestrichen und lässt sich über das Auge ausblenden.
+- **Wochenhandlungen zuteilen:** per Tipp einem Wochentag zuordnen; vergangene Tage lassen sich nachträglich abhaken.
 - **Diesen Monat:** Monatshandlungen für heute einplanen.
+- **Monatsübersicht pro Ziel:** Kalender mit erledigten (grün) und verpassten (rot) Tagen, Wochen und Monaten.
+- Zwischen „Heute" und „Ziele" lässt sich wischen.
 - Heller und dunkler Modus, Deutsch und Englisch.
 
 ## Datenschutz als Prinzip

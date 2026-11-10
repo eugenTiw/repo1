@@ -28,6 +28,9 @@ data class AppColors(
     val accentSoft: Color,
     val onAccent: Color,
     val danger: Color,
+    val dangerSoft: Color,
+    val success: Color,
+    val onSuccess: Color,
 )
 
 private val LightColors = AppColors(
@@ -43,6 +46,9 @@ private val LightColors = AppColors(
     accentSoft = Color(0xFFE3EEEA),
     onAccent = Color(0xFFFFFFFF),
     danger = Color(0xFFC0392B),
+    dangerSoft = Color(0xFFF8DFDB),
+    success = Color(0xFF3A9B63),
+    onSuccess = Color(0xFFFFFFFF),
 )
 
 private val DarkColors = AppColors(
@@ -58,6 +64,9 @@ private val DarkColors = AppColors(
     accentSoft = Color(0xFF1F3530),
     onAccent = Color(0xFF0F1A17),
     danger = Color(0xFFFF6B5E),
+    dangerSoft = Color(0xFF3A1F1C),
+    success = Color(0xFF4FBF7F),
+    onSuccess = Color(0xFF0C1F14),
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightColors }
@@ -65,6 +74,7 @@ val LocalAppColors = staticCompositionLocalOf { LightColors }
 /** Wenige, klar abgestufte Schriftgrößen in der Systemschrift. */
 object AppType {
     val largeTitle = TextStyle(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp)
+    val title = TextStyle(fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp)
     val headline = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold)
     val body = TextStyle(fontSize = 17.sp, lineHeight = 22.sp)
     val subhead = TextStyle(fontSize = 15.sp, lineHeight = 20.sp)

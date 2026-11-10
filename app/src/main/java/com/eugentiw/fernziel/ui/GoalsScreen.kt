@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +24,7 @@ import com.eugentiw.fernziel.data.Goal
 @Composable
 fun GoalsScreen(
     state: AppState,
+    scrollState: ScrollState,
     onAdd: () -> Unit,
     onOpen: (Long) -> Unit,
 ) {
@@ -32,7 +33,7 @@ fun GoalsScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 32.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

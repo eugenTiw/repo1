@@ -6,11 +6,13 @@
     <string name="tab_goals">Goals</string>
 
     <string name="today_title">Today</string>
-    <string name="section_week">This week</string>
-    <string name="section_todo">To do today</string>
+    <string name="section_week">Plan weekly actions</string>
     <string name="section_month">This month</string>
     <string name="week_hint">Tap a day to plan the action for it. Past days can be ticked off afterwards.</string>
-    <string name="nothing_planned">Nothing planned for today.</string>
+    <string name="nothing_planned">Nothing planned.</string>
+    <string name="all_done">All done.</string>
+    <string name="hide_done">Hide completed</string>
+    <string name="show_done">Show completed</string>
     <string name="plan_today">Plan for today</string>
     <string name="planned">Planned</string>
     <string name="done">Done</string>
@@ -24,6 +26,19 @@
     <string name="section_achieved">Achieved</string>
     <string name="achieved_on">Achieved on %1$s</string>
     <string name="privacy_note">All data stays on this device. The app has no internet access.</string>
+
+    <string name="back">Back</string>
+    <string name="edit">Edit</string>
+    <string name="no_actions">This goal has no actions yet. You can add some via “Edit”.</string>
+    <string name="calendar_hint">Tap a day to mark it as done or to remove the mark.</string>
+    <string name="prev_month">Previous month</string>
+    <string name="next_month">Next month</string>
+    <string name="mark_missed">not done</string>
+    <string name="summary_days">%1$d of %2$d days done</string>
+    <string name="summary_weeks">%1$d of %2$d weeks achieved</string>
+    <string name="summary_count">Done %1$d of %2$d times</string>
+    <string name="legend_done">Achieved</string>
+    <string name="legend_missed">Missed</string>
 
     <string name="new_goal">New goal</string>
     <string name="edit_goal">Edit goal</string>

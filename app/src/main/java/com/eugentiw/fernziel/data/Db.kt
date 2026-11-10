@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper
  * Lokale SQLite-Datenbank. Alle Daten liegen ausschließlich im privaten
  * App-Speicher des Geräts; es gibt keinerlei Netzwerkzugriff.
  */
-class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 1) {
+class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 2) {
 
     companion object {
         const val COMPLETIONS = "completions"
@@ -38,7 +38,8 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 "title TEXT NOT NULL, " +
                 "period TEXT NOT NULL, " +
                 "times INTEGER NOT NULL, " +
-                "position INTEGER NOT NULL DEFAULT 0)"
+                "position INTEGER NOT NULL DEFAULT 0, " +
+                "created_day INTEGER NOT NULL DEFAULT 0)"
         )
         db.execSQL(
             "CREATE TABLE completions(" +
@@ -55,7 +56,14 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Version 1: noch keine Migrationen.
+        if (oldVersion < 2) {
+            // Version 2: Startdatum je Handlung. Bestehende Handlungen übernehmen das Datum ihres Ziels.
+            db.execSQL("ALTER TABLE actions ADD COLUMN created_day INTEGER NOT NULL DEFAULT 0")
+            db.execSQL(
+                "UPDATE actions SET created_day = " +
+                    "(SELECT created_day FROM goals WHERE goals.id = actions.goal_id)"
+            )
+        }
     }
 
     fun loadGoals(): List<Goal> {
@@ -85,7 +93,7 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
     fun loadActions(): List<GoalAction> {
         val out = ArrayList<GoalAction>()
         readableDatabase.rawQuery(
-            "SELECT id, goal_id, title, period, times, position " +
+            "SELECT id, goal_id, title, period, times, position, created_day " +
                 "FROM actions ORDER BY goal_id, position, id",
             null,
         ).use { c ->
@@ -98,6 +106,7 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                         period = periodOf(c.getString(3)),
                         times = c.getInt(4),
                         position = c.getInt(5),
+                        createdDay = c.getLong(6),
                     )
                 )
             }
@@ -112,6 +121,17 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
             "SELECT action_id, day FROM $table WHERE day BETWEEN $fromDay AND $toDay",
             null,
         ).use { c ->
+            while (c.moveToNext()) {
+                out.add(DayRef(c.getLong(0), c.getLong(1)))
+            }
+        }
+        return out
+    }
+
+    /** Lädt alle Einträge einer Tabelle, z. B. den gesamten Verlauf der Erledigungen. */
+    fun loadAllRefs(table: String): Set<DayRef> {
+        val out = HashSet<DayRef>()
+        readableDatabase.rawQuery("SELECT action_id, day FROM $table", null).use { c ->
             while (c.moveToNext()) {
                 out.add(DayRef(c.getLong(0), c.getLong(1)))
             }
@@ -156,6 +176,7 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 v.put("times", action.times)
                 v.put("position", index)
                 if (action.id == 0L) {
+                    v.put("created_day", action.createdDay)
                     db.insertOrThrow("actions", null, v)
                 } else {
                     db.update("actions", v, "id = ?", arrayOf(action.id.toString()))
