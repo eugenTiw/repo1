@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Fernziel</string>
+
+    <string name="tab_today">Today</string>
+    <string name="tab_goals">Goals</string>
+
+    <string name="today_title">Today</string>
+    <string name="section_week">This week</string>
+    <string name="section_todo">To do today</string>
+    <string name="section_month">This month</string>
+    <string name="week_hint">Tap a day to plan the action for it. Past days can be ticked off afterwards.</string>
+    <string name="nothing_planned">Nothing planned for today.</string>
+    <string name="plan_today">Plan for today</string>
+    <string name="planned">Planned</string>
+    <string name="done">Done</string>
+
+    <string name="empty_title">No goals yet</string>
+    <string name="empty_text">Add your first goal and decide which actions will get you there.</string>
+    <string name="add_first_goal">Add your first goal</string>
+
+    <string name="goals_title">Goals</string>
+    <string name="add_goal">Add goal</string>
+    <string name="section_achieved">Achieved</string>
+    <string name="achieved_on">Achieved on %1$s</string>
+    <string name="privacy_note">All data stays on this device. The app has no internet access.</string>
+
+    <string name="new_goal">New goal</string>
+    <string name="edit_goal">Edit goal</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="ok">OK</string>
+    <string name="field_title">What do you want to achieve?</string>
+    <string name="field_criterion">Achieved when … (optional)</string>
+    <string name="section_category">Area of life</string>
+    <string name="section_deadline">Target date</string>
+    <string name="deadline_label">Date</string>
+    <string name="no_date">No date</string>
+    <string name="remove_date">Remove date</string>
+    <string name="section_actions">Actions</string>
+    <string name="actions_hint">Which actions will get you to your goal, and how often?</string>
+    <string name="action_placeholder">e.g. run for 30 minutes</string>
+    <string name="add_action">Add action</string>
+    <string name="remove_action">Remove action</string>
+    <string name="period_daily">Daily</string>
+    <string name="period_weekly">Weekly</string>
+    <string name="period_monthly">Monthly</string>
+    <string name="freq_daily">Daily</string>
+    <string name="freq_weekly">%1$d× per week</string>
+    <string name="freq_monthly">%1$d× per month</string>
+    <string name="less">Less</string>
+    <string name="more">More</string>
+    <string name="mark_achieved">Mark as achieved</string>
+    <string name="reactivate">Reactivate goal</string>
+    <string name="delete_goal">Delete goal</string>
+    <string name="delete_confirm_title">Delete goal?</string>
+    <string name="delete_confirm_text">The goal and its entire history will be removed permanently.</string>
+    <string name="delete">Delete</string>
+
+    <string name="days_left_other">%1$d days left</string>
+    <string name="days_left_one">1 day left</string>
+    <string name="due_today">due today</string>
+    <string name="overdue_one">1 day overdue</string>
+    <string name="overdue_other">%1$d days overdue</string>
+
+    <string name="cat_health">Health</string>
+    <string name="cat_finance">Finances</string>
+    <string name="cat_career">Career</string>
+    <string name="cat_education">Education</string>
+    <string name="cat_relationships">Relationships</string>
+    <string name="cat_personal">Personal</string>
+    <string name="cat_leisure">Leisure</string>
+    <string name="cat_other">Other</string>
+</resources>

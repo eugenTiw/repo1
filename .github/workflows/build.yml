@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Java 17 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle einrichten
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Testversion bauen
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: APK als Build-Artefakt ablegen
+        uses: actions/upload-artifact@v4
+        with:
+          name: fernziel-test-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Testversion als Download veröffentlichen
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk fernziel-test.apk
+          gh release delete test-build --yes --cleanup-tag || true
+          gh release create test-build fernziel-test.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Testversion" \
+            --notes "Automatisch gebaute Testversion (Build $GITHUB_RUN_NUMBER). Nicht für den Play Store signiert."

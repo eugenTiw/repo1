@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_today">Heute</string>
+    <string name="tab_goals">Ziele</string>
+
+    <string name="today_title">Heute</string>
+    <string name="section_week">Diese Woche</string>
+    <string name="section_todo">Heute zu erledigen</string>
+    <string name="section_month">Diesen Monat</string>
+    <string name="week_hint">Tippe auf einen Tag, um die Handlung dafür einzuplanen. Vergangene Tage lassen sich nachträglich abhaken.</string>
+    <string name="nothing_planned">Für heute ist nichts eingeplant.</string>
+    <string name="plan_today">Heute einplanen</string>
+    <string name="planned">Eingeplant</string>
+    <string name="done">Erledigt</string>
+
+    <string name="empty_title">Noch keine Ziele</string>
+    <string name="empty_text">Lege dein erstes Ziel an und bestimme, welche Handlungen dich dorthin bringen.</string>
+    <string name="add_first_goal">Erstes Ziel anlegen</string>
+
+    <string name="goals_title">Ziele</string>
+    <string name="add_goal">Ziel hinzufügen</string>
+    <string name="section_achieved">Erreicht</string>
+    <string name="achieved_on">Erreicht am %1$s</string>
+    <string name="privacy_note">Alle Daten bleiben auf diesem Gerät. Die App hat keinen Internetzugriff.</string>
+
+    <string name="new_goal">Neues Ziel</string>
+    <string name="edit_goal">Ziel bearbeiten</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="save">Sichern</string>
+    <string name="ok">OK</string>
+    <string name="field_title">Was möchtest du erreichen?</string>
+    <string name="field_criterion">Erreicht, wenn … (optional)</string>
+    <string name="section_category">Lebensbereich</string>
+    <string name="section_deadline">Zieltermin</string>
+    <string name="deadline_label">Datum</string>
+    <string name="no_date">Kein Datum</string>
+    <string name="remove_date">Datum entfernen</string>
+    <string name="section_actions">Handlungen</string>
+    <string name="actions_hint">Welche Handlungen bringen dich zum Ziel, und wie oft?</string>
+    <string name="action_placeholder">z. B. 30 Minuten laufen</string>
+    <string name="add_action">Handlung hinzufügen</string>
+    <string name="remove_action">Handlung entfernen</string>
+    <string name="period_daily">Täglich</string>
+    <string name="period_weekly">Wöchentlich</string>
+    <string name="period_monthly">Monatlich</string>
+    <string name="freq_daily">Täglich</string>
+    <string name="freq_weekly">%1$d× pro Woche</string>
+    <string name="freq_monthly">%1$d× pro Monat</string>
+    <string name="less">Weniger</string>
+    <string name="more">Mehr</string>
+    <string name="mark_achieved">Als erreicht markieren</string>
+    <string name="reactivate">Ziel wieder aktivieren</string>
+    <string name="delete_goal">Ziel löschen</string>
+    <string name="delete_confirm_title">Ziel löschen?</string>
+    <string name="delete_confirm_text">Das Ziel und sein gesamter Verlauf werden dauerhaft entfernt.</string>
+    <string name="delete">Löschen</string>
+
+    <string name="days_left_other">noch %1$d Tage</string>
+    <string name="days_left_one">noch 1 Tag</string>
+    <string name="due_today">heute fällig</string>
+    <string name="overdue_one">seit 1 Tag überfällig</string>
+    <string name="overdue_other">seit %1$d Tagen überfällig</string>
+
+    <string name="cat_health">Gesundheit</string>
+    <string name="cat_finance">Finanzen</string>
+    <string name="cat_career">Beruf</string>
+    <string name="cat_education">Bildung</string>
+    <string name="cat_relationships">Beziehungen</string>
+    <string name="cat_personal">Persönliches</string>
+    <string name="cat_leisure">Freizeit</string>
+    <string name="cat_other">Sonstiges</string>
+</resources>
