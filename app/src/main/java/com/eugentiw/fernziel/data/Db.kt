@@ -9,11 +9,14 @@ import android.database.sqlite.SQLiteOpenHelper
  * Lokale SQLite-Datenbank. Alle Daten liegen ausschließlich im privaten
  * App-Speicher des Geräts; es gibt keinerlei Netzwerkzugriff.
  */
-class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 3) {
+class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 4) {
 
     companion object {
         const val COMPLETIONS = "completions"
         const val PLANS = "plans"
+
+        /** Tage, die ausdrücklich als „nicht geschafft" markiert wurden. */
+        const val FAILURES = "failures"
     }
 
     override fun onConfigure(db: SQLiteDatabase) {
@@ -55,8 +58,19 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 "PRIMARY KEY(action_id, day))"
         )
         createTodos(db)
+        createFailures(db)
     }
 
+    private fun createFailures(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE failures(" +
+                "action_id INTEGER NOT NULL REFERENCES actions(id) ON DELETE CASCADE, " +
+                "day INTEGER NOT NULL, " +
+                "PRIMARY KEY(action_id, day))"
+        )
+    }
+
+    // Spalte done der To-dos: 0 = offen, 1 = erledigt, 2 = nicht geschafft.
     private fun createTodos(db: SQLiteDatabase) {
         db.execSQL(
             "CREATE TABLE todos(" +
@@ -80,6 +94,10 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
             // Version 3: eigene To-dos je Tag und freiwillige Erinnerung je Handlung.
             createTodos(db)
             db.execSQL("ALTER TABLE actions ADD COLUMN reminder_minutes INTEGER")
+        }
+        if (oldVersion < 4) {
+            // Version 4: Tage lassen sich ausdrücklich als „nicht geschafft" markieren.
+            createFailures(db)
         }
     }
 
@@ -223,7 +241,16 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
         val out = ArrayList<Todo>()
         readableDatabase.rawQuery("SELECT id, title, day, done FROM todos ORDER BY day, id", null).use { c ->
             while (c.moveToNext()) {
-                out.add(Todo(id = c.getLong(0), title = c.getString(1), day = c.getLong(2), done = c.getInt(3) != 0))
+                val status = c.getInt(3)
+                out.add(
+                    Todo(
+                        id = c.getLong(0),
+                        title = c.getString(1),
+                        day = c.getLong(2),
+                        done = status == 1,
+                        failed = status == 2,
+                    )
+                )
             }
         }
         return out
@@ -237,15 +264,65 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
         writableDatabase.insertOrThrow("todos", null, v)
     }
 
+    /** Schaltet ein To-do weiter: offen → erledigt → nicht geschafft → offen. */
     fun flipTodo(todoId: Long) {
-        writableDatabase.execSQL("UPDATE todos SET done = 1 - done WHERE id = $todoId")
+        writableDatabase.execSQL("UPDATE todos SET done = (done + 1) % 3 WHERE id = $todoId")
     }
 
     fun removeTodo(todoId: Long) {
         writableDatabase.delete("todos", "id = ?", arrayOf(todoId.toString()))
     }
 
-    /** Schaltet eine Erledigung bzw. Planung für einen Tag um. */
+    /**
+     * Schaltet die Bewertung einer Handlung an einem Tag weiter:
+     * offen → erledigt → nicht geschafft → offen.
+     *
+     * Mit [missedWhenOpen] zählt ein offener Tag ohnehin als nicht geschafft (vergangene Tage
+     * täglicher Handlungen). Dann wechselt der Tag nur zwischen erledigt und nicht geschafft.
+     */
+    fun cycleMark(actionId: Long, day: Long, missedWhenOpen: Boolean) {
+        val db = writableDatabase
+        val args = arrayOf(actionId.toString(), day.toString())
+        db.beginTransaction()
+        try {
+            val wasDone = db.delete(COMPLETIONS, "action_id = ? AND day = ?", args) > 0
+            val wasFailed = db.delete(FAILURES, "action_id = ? AND day = ?", args) > 0
+            if (wasDone) {
+                insertRef(db, FAILURES, actionId, day)
+            } else if (!wasFailed || missedWhenOpen) {
+                insertRef(db, COMPLETIONS, actionId, day)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** Schaltet „erledigt" für einen Tag um. Eine Markierung „nicht geschafft" entfällt dabei. */
+    fun toggleDone(actionId: Long, day: Long) {
+        val db = writableDatabase
+        val args = arrayOf(actionId.toString(), day.toString())
+        db.beginTransaction()
+        try {
+            val wasDone = db.delete(COMPLETIONS, "action_id = ? AND day = ?", args) > 0
+            db.delete(FAILURES, "action_id = ? AND day = ?", args)
+            if (!wasDone) {
+                insertRef(db, COMPLETIONS, actionId, day)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    private fun insertRef(db: SQLiteDatabase, table: String, actionId: Long, day: Long) {
+        val v = ContentValues()
+        v.put("action_id", actionId)
+        v.put("day", day)
+        db.insertWithOnConflict(table, null, v, SQLiteDatabase.CONFLICT_IGNORE)
+    }
+
+    /** Schaltet eine Planung für einen Tag um. */
     fun toggleRef(table: String, actionId: Long, day: Long) {
         val db = writableDatabase
         val removed = db.delete(
@@ -254,10 +331,7 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
             arrayOf(actionId.toString(), day.toString()),
         )
         if (removed == 0) {
-            val v = ContentValues()
-            v.put("action_id", actionId)
-            v.put("day", day)
-            db.insertWithOnConflict(table, null, v, SQLiteDatabase.CONFLICT_IGNORE)
+            insertRef(db, table, actionId, day)
         }
     }
 

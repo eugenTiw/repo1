@@ -60,7 +60,7 @@ import java.util.Locale
 fun HistoryScreen(
     state: AppState,
     onBack: () -> Unit,
-    onToggleDone: (Long, Long) -> Unit,
+    onCycleMark: (Long, Long) -> Unit,
     onToggleTodo: (Long) -> Unit,
 ) {
     val c = LocalAppColors.current
@@ -158,7 +158,7 @@ fun HistoryScreen(
                     text = dayTitle,
                     trailing = if (stats.second > 0) "${stats.first}/${stats.second}" else null,
                 )
-                DayPanel(state, selectedDay, onToggleDone, onToggleTodo)
+                DayPanel(state, selectedDay, onCycleMark, onToggleTodo)
             } else if (mode == 1) {
                 SectionHeader(formatDay(selectedWeek) + " – " + formatDay(selectedWeek + 6))
                 PeriodPanel(
@@ -303,12 +303,12 @@ private fun OverviewDay(
     }
 }
 
-/** Aufgaben und eigene To-dos eines Tages. Bis einschließlich heute lassen sie sich abhaken. */
+/** Aufgaben und eigene To-dos eines Tages. Bis einschließlich heute lassen sie sich bewerten. */
 @Composable
 private fun DayPanel(
     state: AppState,
     day: Long,
-    onToggleDone: (Long, Long) -> Unit,
+    onCycleMark: (Long, Long) -> Unit,
     onToggleTodo: (Long) -> Unit,
 ) {
     val c = LocalAppColors.current
@@ -330,9 +330,9 @@ private fun DayPanel(
             TaskRow(
                 title = item.action.title,
                 subtitle = item.goal.title + " · " + frequencyText(item.action.period, item.action.times),
-                done = item.done,
+                mark = item.mark,
                 enabled = day <= state.today,
-                onToggle = { onToggleDone(item.action.id, day) },
+                onToggle = { onCycleMark(item.action.id, day) },
             )
         }
         ownTodos.forEachIndexed { index, todo ->
@@ -342,7 +342,7 @@ private fun DayPanel(
             TaskRow(
                 title = todo.title,
                 subtitle = stringResource(R.string.own_todo),
-                done = todo.done,
+                mark = todoMark(todo),
                 enabled = true,
                 onToggle = { onToggleTodo(todo.id) },
             )

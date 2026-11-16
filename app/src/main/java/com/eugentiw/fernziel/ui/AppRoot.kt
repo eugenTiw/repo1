@@ -98,14 +98,14 @@ fun AppRoot(viewModel: AppViewModel) {
                 goal = detailGoal,
                 onBack = { detailGoalId = null },
                 onEdit = { openEditor(detailGoal.id) },
-                onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
+                onCycleMark = { actionId, day -> viewModel.cycleMark(actionId, day) },
             )
         } else if (historyOpen) {
             BackHandler { historyOpen = false }
             HistoryScreen(
                 state = state,
                 onBack = { historyOpen = false },
-                onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
+                onCycleMark = { actionId, day -> viewModel.cycleMark(actionId, day) },
                 onToggleTodo = { todoId -> viewModel.toggleTodo(todoId) },
             )
         } else {
@@ -134,6 +134,7 @@ fun AppRoot(viewModel: AppViewModel) {
                             onToggleHideDone = { viewModel.toggleHideDone() },
                             onOpenHistory = { historyOpen = true },
                             onToggleDone = { actionId, day -> viewModel.toggleDone(actionId, day) },
+                            onCycleMark = { actionId, day -> viewModel.cycleMark(actionId, day) },
                             onTogglePlan = { actionId, day -> viewModel.togglePlan(actionId, day) },
                             onAddTodo = { title, day -> viewModel.addTodo(title, day) },
                             onToggleTodo = { todoId -> viewModel.toggleTodo(todoId) },

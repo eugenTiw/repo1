@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.eugentiw.fernziel.Mark
 import com.eugentiw.fernziel.R
 
 /** Abschnittsüberschrift in Kapitälchen-Anmutung, optional mit Zusatz rechts. */
@@ -221,21 +222,33 @@ fun GlyphButton(
     }
 }
 
-/** Kreis zum Abhaken: leer mit feinem Rand oder gefüllt mit Haken. */
+/**
+ * Kreis zum Bewerten: leer mit feinem Rand (offen), grün mit Haken (erledigt)
+ * oder zartrot mit rotem Kreuz (nicht geschafft).
+ */
 @Composable
-fun CheckMark(done: Boolean) {
+fun CheckMark(mark: Mark) {
     val c = LocalAppColors.current
-    val fill = c.accent
-    val check = c.onAccent
+    val doneFill = c.success
+    val check = c.onSuccess
+    val missedFill = c.dangerSoft
+    val cross = c.danger
     val ring = c.textTertiary
     Canvas(Modifier.size(24.dp)) {
-        if (done) {
-            drawCircle(fill)
+        if (mark == Mark.DONE) {
+            drawCircle(doneFill)
             drawPath(
                 checkPath(size.width, size.height),
                 check,
                 style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
             )
+        } else if (mark == Mark.MISSED) {
+            val w = size.width
+            val h = size.height
+            val sw = 2.dp.toPx()
+            drawCircle(missedFill)
+            drawLine(cross, Offset(w * 0.34f, h * 0.34f), Offset(w * 0.66f, h * 0.66f), strokeWidth = sw, cap = StrokeCap.Round)
+            drawLine(cross, Offset(w * 0.66f, h * 0.34f), Offset(w * 0.34f, h * 0.66f), strokeWidth = sw, cap = StrokeCap.Round)
         } else {
             val sw = 1.75.dp.toPx()
             drawCircle(ring, radius = size.minDimension / 2f - sw / 2f, style = Stroke(width = sw))
@@ -244,40 +257,47 @@ fun CheckMark(done: Boolean) {
 }
 
 /**
- * Eine abhakbare Aufgabe. Erledigtes wird durchgestrichen und bleibt in der Liste.
+ * Eine Aufgabe zum Bewerten. Tippen schaltet weiter: offen → erledigt (grüner Haken) →
+ * nicht geschafft (rotes Kreuz). Erledigtes wird durchgestrichen und bleibt in der Liste.
+ * [trailing] zeigt rechts einen ruhigen Zusatz, z. B. die Serie.
  * Mit [onRemove] erscheint rechts ein kleines Kreuz zum Entfernen.
  */
 @Composable
 fun TaskRow(
     title: String,
     subtitle: String?,
-    done: Boolean,
+    mark: Mark,
     enabled: Boolean,
     onToggle: () -> Unit,
     onRemove: (() -> Unit)? = null,
     removeLabel: String = "",
+    trailing: String? = null,
 ) {
     val c = LocalAppColors.current
+    val done = mark == Mark.DONE
+    val stateLabel = stringResource(
+        when (mark) {
+            Mark.DONE -> R.string.done
+            Mark.MISSED -> R.string.legend_missed
+            else -> R.string.state_open
+        }
+    )
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Row(
             Modifier
                 .weight(1f)
-                .toggleable(
-                    value = done,
-                    enabled = enabled,
-                    role = Role.Checkbox,
-                    onValueChange = { onToggle() },
-                )
+                .clickable(enabled = enabled, role = Role.Checkbox, onClick = onToggle)
+                .semantics { stateDescription = stateLabel }
                 .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CheckMark(done)
+            CheckMark(mark)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     title,
                     style = AppType.body,
-                    color = if (done || !enabled) c.textSecondary else c.text,
+                    color = if (mark != Mark.NONE || !enabled) c.textSecondary else c.text,
                     textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
                 )
                 if (subtitle != null) {
@@ -289,6 +309,10 @@ fun TaskRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+            }
+            if (trailing != null) {
+                Spacer(Modifier.width(12.dp))
+                Text(trailing, style = AppType.caption, color = c.textSecondary, maxLines = 1)
             }
         }
         if (onRemove != null) {

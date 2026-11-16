@@ -2,10 +2,12 @@ package com.eugentiw.fernziel.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import com.eugentiw.fernziel.Mark
 import com.eugentiw.fernziel.R
 import com.eugentiw.fernziel.data.Category
 import com.eugentiw.fernziel.data.Goal
 import com.eugentiw.fernziel.data.Period
+import com.eugentiw.fernziel.data.Todo
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -54,4 +56,11 @@ fun deadlineText(goal: Goal, today: Long): String {
         else -> stringResource(R.string.overdue_other, -diff)
     }
     return formatDay(target) + " · " + relative
+}
+
+/** Anzeige eines eigenen To-dos: grüner Haken, rotes Kreuz oder offen. */
+fun todoMark(todo: Todo): Mark = when {
+    todo.done -> Mark.DONE
+    todo.failed -> Mark.MISSED
+    else -> Mark.NONE
 }

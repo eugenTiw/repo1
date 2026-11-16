@@ -17,6 +17,12 @@ fun weekStartOf(day: Long): Long =
 enum class Mark { NONE, DONE, PARTIAL, MISSED }
 
 /**
+ * Serie einer Handlung: wie viele Zeiträume in Folge die Vorgabe erfüllt wurde.
+ * Gezählt wird in Tagen, Wochen oder Monaten, je nach Häufigkeit der Handlung.
+ */
+data class Streak(val current: Int, val best: Int)
+
+/**
  * Wertet den Verlauf einer Handlung aus.
  *
  * Bewertet wird jeweils der Zeitraum, auf den sich die Häufigkeit bezieht:
@@ -27,15 +33,21 @@ class ActionHistory(
     val action: GoalAction,
     private val doneDays: Set<Long>,
     private val today: Long,
+    /** Tage, die ausdrücklich als „nicht geschafft" markiert wurden. */
+    private val failedDays: Set<Long> = emptySet(),
 ) {
 
     fun isDone(day: Long): Boolean = doneDays.contains(day)
 
     fun doneBetween(from: Long, to: Long): Int = doneDays.count { it >= from && it <= to }
 
-    /** Tag: erledigt ist grün; rot wird nur ein vergangener Tag einer täglichen Handlung. */
+    /**
+     * Tag: erledigt ist grün. Rot ist ein Tag, der ausdrücklich als nicht geschafft markiert
+     * wurde, sowie jeder vergangene, nicht erledigte Tag einer täglichen Handlung.
+     */
     fun dayMark(day: Long): Mark {
         if (doneDays.contains(day)) return Mark.DONE
+        if (failedDays.contains(day)) return Mark.MISSED
         val missed = action.period == Period.DAILY && day >= action.createdDay && day < today
         return if (missed) Mark.MISSED else Mark.NONE
     }
@@ -98,6 +110,80 @@ class ActionHistory(
                 Pair(done, total)
             }
         }
+    }
+
+    /**
+     * Aktuelle und längste Serie. Der laufende Zeitraum (heute, diese Woche, dieser Monat)
+     * unterbricht die aktuelle Serie nicht, solange er noch offen ist; er zählt mit, sobald
+     * die Vorgabe erfüllt ist. Ein heute als nicht geschafft markierter Tag beendet sie sofort.
+     */
+    fun streak(): Streak = when (action.period) {
+        Period.DAILY -> dailyStreak()
+        Period.WEEKLY -> periodStreak(weekIndexOf(today)) { day -> weekIndexOf(day) }
+        Period.MONTHLY -> periodStreak(monthIndexOf(today)) { day -> monthIndexOf(day) }
+    }
+
+    private fun dailyStreak(): Streak {
+        var current = 0
+        if (!failedDays.contains(today)) {
+            var day = if (doneDays.contains(today)) today else today - 1
+            while (doneDays.contains(day)) {
+                current++
+                day--
+            }
+        }
+        var best = 0
+        var run = 0
+        var previous = Long.MIN_VALUE
+        for (day in doneDays.sorted()) {
+            if (day > today) break
+            run = if (day == previous + 1) run + 1 else 1
+            if (run > best) best = run
+            previous = day
+        }
+        return Streak(current, best)
+    }
+
+    /**
+     * Serie über Wochen oder Monate. [indexOf] ordnet jedem Tag die fortlaufende Nummer
+     * seines Zeitraums zu; [currentIndex] ist die Nummer des laufenden Zeitraums.
+     */
+    private fun periodStreak(currentIndex: Long, indexOf: (Long) -> Long): Streak {
+        val counts = HashMap<Long, Int>()
+        for (day in doneDays) {
+            val index = indexOf(day)
+            counts[index] = (counts[index] ?: 0) + 1
+        }
+        val needed = maxOf(1, action.times)
+        val first = counts.keys.minOrNull() ?: return Streak(0, 0)
+
+        var index = if ((counts[currentIndex] ?: 0) >= needed) currentIndex else currentIndex - 1
+        var current = 0
+        while ((counts[index] ?: 0) >= needed) {
+            current++
+            index--
+        }
+
+        var best = 0
+        var run = 0
+        index = first
+        while (index <= currentIndex) {
+            if ((counts[index] ?: 0) >= needed) {
+                run++
+                if (run > best) best = run
+            } else {
+                run = 0
+            }
+            index++
+        }
+        return Streak(current, best)
+    }
+
+    private fun weekIndexOf(day: Long): Long = Math.floorDiv(weekStartOf(day), 7L)
+
+    private fun monthIndexOf(day: Long): Long {
+        val date = LocalDate.ofEpochDay(day)
+        return date.year * 12L + date.monthValue - 1
     }
 
     private fun monthlyMark(first: Long, last: Long, over: Boolean): Mark {
