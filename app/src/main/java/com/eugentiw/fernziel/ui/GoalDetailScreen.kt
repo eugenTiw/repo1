@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -45,6 +46,7 @@ import com.eugentiw.fernziel.ActionHistory
 import com.eugentiw.fernziel.AppState
 import com.eugentiw.fernziel.Mark
 import com.eugentiw.fernziel.R
+import com.eugentiw.fernziel.Streak
 import com.eugentiw.fernziel.data.Goal
 import com.eugentiw.fernziel.data.GoalAction
 import com.eugentiw.fernziel.data.Period
@@ -58,8 +60,9 @@ import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 
 /**
- * Monatsübersicht eines Ziels: Kalender mit erledigten (grün) und verpassten (rot) Tagen,
- * dazu die zwölf Monate des Jahres, in denen die Vorgabe geschafft oder verpasst wurde.
+ * Monatsübersicht eines Ziels: die Serie der gewählten Handlung, ein Kalender mit erledigten
+ * (grün) und verpassten (rot) Tagen, dazu die zwölf Monate des Jahres, in denen die Vorgabe
+ * geschafft oder verpasst wurde.
  */
 @Composable
 fun GoalDetailScreen(
@@ -67,7 +70,7 @@ fun GoalDetailScreen(
     goal: Goal,
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onToggleDone: (Long, Long) -> Unit,
+    onCycleMark: (Long, Long) -> Unit,
 ) {
     val c = LocalAppColors.current
     val actions = state.actionsOf(goal.id)
@@ -80,9 +83,10 @@ fun GoalDetailScreen(
 
     val action: GoalAction? = actions.firstOrNull { it.id == selectedActionId } ?: actions.firstOrNull()
     val month: YearMonth = YearMonth.of(monthIndex / 12, monthIndex % 12 + 1)
-    val history: ActionHistory? = remember(action, state.completions, state.today) {
-        if (action == null) null else ActionHistory(action, state.doneDaysOf(action.id), state.today)
+    val history: ActionHistory? = remember(action, state.completions, state.failures, state.today) {
+        if (action == null) null else state.historyOf(action)
     }
+    val streak: Streak? = remember(history) { history?.streak() }
     val deadline = deadlineText(goal, state.today)
     val achievedDay = goal.achievedDay
 
@@ -145,7 +149,7 @@ fun GoalDetailScreen(
                 )
             }
 
-            if (action == null || history == null) {
+            if (action == null || history == null || streak == null) {
                 Spacer(Modifier.height(24.dp))
                 Panel {
                     Text(
@@ -177,13 +181,17 @@ fun GoalDetailScreen(
                     trailing = frequencyText(action.period, action.times).uppercase(),
                 )
                 Panel {
+                    StreakRow(action.period, streak)
+                }
+                Spacer(Modifier.height(12.dp))
+                Panel {
                     MonthCalendar(
                         month = month,
                         history = history,
                         today = state.today,
                         onPrevious = { monthIndex = monthIndex - 1 },
                         onNext = { monthIndex = monthIndex + 1 },
-                        onToggle = { day -> onToggleDone(action.id, day) },
+                        onToggle = { day -> onCycleMark(action.id, day) },
                     )
                 }
                 Text(
@@ -204,6 +212,47 @@ fun GoalDetailScreen(
                 }
                 Legend()
             }
+        }
+    }
+}
+
+/** Aktuelle und längste Serie nebeneinander, gezählt in Tagen, Wochen oder Monaten. */
+@Composable
+private fun StreakRow(period: Period, streak: Streak) {
+    val c = LocalAppColors.current
+    val unit = when (period) {
+        Period.DAILY -> R.plurals.streak_days
+        Period.WEEKLY -> R.plurals.streak_weeks
+        Period.MONTHLY -> R.plurals.streak_months
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.streak_current), style = AppType.caption, color = c.textSecondary)
+            Text(
+                pluralStringResource(unit, streak.current, streak.current),
+                style = AppType.headline,
+                color = if (streak.current > 0) c.success else c.text,
+            )
+        }
+        Box(
+            Modifier
+                .width(1.dp)
+                .height(32.dp)
+                .background(c.separator)
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.streak_best), style = AppType.caption, color = c.textSecondary)
+            Text(
+                pluralStringResource(unit, streak.best, streak.best),
+                style = AppType.headline,
+                color = c.text,
+            )
         }
     }
 }
@@ -321,7 +370,7 @@ private fun MonthCalendar(
     }
 }
 
-/** Ein Kalendertag: grün gefüllt = erledigt, zartrot = verpasst. Tippen schaltet „erledigt" um. */
+/** Ein Kalendertag: grün gefüllt = erledigt, zartrot = nicht geschafft. Tippen schaltet die Bewertung weiter. */
 @Composable
 private fun CalendarDay(
     number: Int,

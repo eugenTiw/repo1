@@ -64,7 +64,8 @@ object Reminders {
             val today = now.toLocalDate().toEpochDay()
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val lastCheck = prefs.getLong(KEY_LAST_CHECK, nowMillis)
-            val doneToday = db.loadRefs(Db.COMPLETIONS, today, today)
+            // Heute bereits bewertet: erledigt oder als nicht geschafft markiert.
+            val doneToday = db.loadRefs(Db.COMPLETIONS, today, today) + db.loadRefs(Db.FAILURES, today, today)
 
             for (action in actions) {
                 val minutes = action.reminderMinutes ?: continue
@@ -73,7 +74,7 @@ object Reminders {
                     .atZone(zone).toInstant().toEpochMilli()
                 val due = occurrence > lastCheck && nowMillis - occurrence < MAX_DELAY_MILLIS
                 if (!due) continue
-                // Tägliche Handlung schon abgehakt: keine Erinnerung nötig.
+                // Tägliche Handlung schon bewertet: keine Erinnerung nötig.
                 if (action.period == Period.DAILY && doneToday.contains(DayRef(action.id, today))) continue
                 show(context, action, goal)
             }

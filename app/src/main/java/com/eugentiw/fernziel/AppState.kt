@@ -7,8 +7,21 @@ import com.eugentiw.fernziel.data.Period
 import com.eugentiw.fernziel.data.Todo
 import java.time.LocalDate
 
-/** Eine Handlung in der To-do-Liste eines Tages. */
-data class TodayItem(val action: GoalAction, val goal: Goal, val done: Boolean)
+/**
+ * Eine Handlung in der To-do-Liste eines Tages.
+ * [mark] ist die Anzeige (grüner Haken, rotes Kreuz oder offen); [failed] sagt, ob der Tag
+ * ausdrücklich als nicht geschafft markiert wurde.
+ */
+data class TodayItem(
+    val action: GoalAction,
+    val goal: Goal,
+    val done: Boolean,
+    val failed: Boolean,
+    val mark: Mark,
+) {
+    /** Abgeschlossen: erledigt oder ausdrücklich als nicht geschafft markiert. */
+    val resolved: Boolean get() = done || failed
+}
 
 /**
  * Zeile der Wochen- oder Monatsauswertung im Verlauf.
@@ -23,6 +36,7 @@ data class AppState(
     val goals: List<Goal> = emptyList(),
     val actions: List<GoalAction> = emptyList(),
     val completions: Set<DayRef> = emptySet(),
+    val failures: Set<DayRef> = emptySet(),
     val plans: Set<DayRef> = emptySet(),
     val todos: List<Todo> = emptyList(),
 ) {
@@ -35,6 +49,8 @@ data class AppState(
     private val todosByDay: Map<Long, List<Todo>> = todos.groupBy { it.day }
     private val doneDaysByAction: Map<Long, Set<Long>> =
         completions.groupBy({ it.actionId }, { it.day }).mapValues { it.value.toSet() }
+    private val failedDaysByAction: Map<Long, Set<Long>> =
+        failures.groupBy({ it.actionId }, { it.day }).mapValues { it.value.toSet() }
 
     val activeGoals: List<Goal> = goals.filter { it.achievedDay == null }
     val achievedGoals: List<Goal> = goals.filter { it.achievedDay != null }
@@ -52,7 +68,34 @@ data class AppState(
 
     fun isDone(actionId: Long, day: Long): Boolean = completions.contains(DayRef(actionId, day))
 
+    /** Ob der Tag ausdrücklich als nicht geschafft markiert wurde. */
+    fun isFailed(actionId: Long, day: Long): Boolean = failures.contains(DayRef(actionId, day))
+
     fun isPlanned(actionId: Long, day: Long): Boolean = plans.contains(DayRef(actionId, day))
+
+    /**
+     * Ob ein offener Tag von selbst als nicht geschafft zählt: jeder vergangene Tag einer
+     * täglichen Handlung ab ihrem Startdatum.
+     */
+    fun missedWhenOpen(action: GoalAction, day: Long): Boolean =
+        action.period == Period.DAILY && day < today && action.createdDay <= day
+
+    /** Anzeige einer Handlung an einem Tag: grüner Haken, rotes Kreuz oder offen. */
+    fun markOf(action: GoalAction, day: Long): Mark = when {
+        isDone(action.id, day) -> Mark.DONE
+        isFailed(action.id, day) || missedWhenOpen(action, day) -> Mark.MISSED
+        else -> Mark.NONE
+    }
+
+    private fun itemOf(action: GoalAction, goal: Goal, day: Long): TodayItem =
+        TodayItem(action, goal, isDone(action.id, day), isFailed(action.id, day), markOf(action, day))
+
+    /** Alle Tage, die ausdrücklich als nicht geschafft markiert wurden. */
+    fun failedDaysOf(actionId: Long): Set<Long> = failedDaysByAction[actionId] ?: emptySet()
+
+    /** Verlauf einer Handlung mit Kalenderbewertung und Serie. */
+    fun historyOf(action: GoalAction): ActionHistory =
+        ActionHistory(action, doneDaysOf(action.id), today, failedDaysOf(action.id))
 
     /** Alle Tage, an denen die Handlung erledigt wurde. */
     fun doneDaysOf(actionId: Long): Set<Long> = doneDaysByAction[actionId] ?: emptySet()
@@ -77,7 +120,7 @@ data class AppState(
 
     /**
      * Handlungen eines Tages: tägliche (ab ihrem Startdatum) sowie Wochen- und Monatshandlungen,
-     * die für den Tag eingeplant oder an ihm erledigt wurden.
+     * die für den Tag eingeplant oder an ihm bewertet (erledigt, nicht geschafft) wurden.
      */
     fun itemsFor(day: Long): List<TodayItem> = activeActions
         .filter { pair ->
@@ -85,10 +128,10 @@ data class AppState(
             if (action.period == Period.DAILY) {
                 action.createdDay <= day
             } else {
-                isPlanned(action.id, day) || isDone(action.id, day)
+                isPlanned(action.id, day) || isDone(action.id, day) || isFailed(action.id, day)
             }
         }
-        .map { pair -> TodayItem(pair.first, pair.second, isDone(pair.first.id, day)) }
+        .map { pair -> itemOf(pair.first, pair.second, day) }
 
     /** Eigene To-dos eines Tages, unabhängig von Zielen. */
     fun todosFor(day: Long): List<Todo> = todosByDay[day] ?: emptyList()
@@ -101,18 +144,18 @@ data class AppState(
 
     /**
      * Handlungen eines Tages für den Verlauf: tägliche, die an dem Tag verfolgt wurden,
-     * und alle übrigen, die an dem Tag erledigt wurden. Schließt erreichte Ziele ein.
+     * und alle übrigen, die an dem Tag bewertet wurden. Schließt erreichte Ziele ein.
      */
     fun historyItemsFor(day: Long): List<TodayItem> = allActions
         .filter { pair ->
             val action = pair.first
             if (action.period == Period.DAILY) {
-                tracked(action, pair.second, day) || isDone(action.id, day)
+                tracked(action, pair.second, day) || isDone(action.id, day) || isFailed(action.id, day)
             } else {
-                isDone(action.id, day)
+                isDone(action.id, day) || isFailed(action.id, day)
             }
         }
-        .map { pair -> TodayItem(pair.first, pair.second, isDone(pair.first.id, day)) }
+        .map { pair -> itemOf(pair.first, pair.second, day) }
 
     /** (erledigt, gesamt) eines Tages über alle Handlungen und eigenen To-dos. */
     fun dayStats(day: Long): Pair<Int, Int> {

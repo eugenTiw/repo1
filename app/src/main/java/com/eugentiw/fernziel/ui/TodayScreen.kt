@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eugentiw.fernziel.AppState
+import com.eugentiw.fernziel.Mark
 import com.eugentiw.fernziel.R
 import com.eugentiw.fernziel.data.Goal
 import com.eugentiw.fernziel.data.GoalAction
@@ -71,6 +73,7 @@ fun TodayScreen(
     onToggleHideDone: () -> Unit,
     onOpenHistory: () -> Unit,
     onToggleDone: (Long, Long) -> Unit,
+    onCycleMark: (Long, Long) -> Unit,
     onTogglePlan: (Long, Long) -> Unit,
     onAddTodo: (String, Long) -> Unit,
     onToggleTodo: (Long) -> Unit,
@@ -189,8 +192,9 @@ fun TodayScreen(
                 val past = day < today
                 val items = state.itemsFor(day)
                 val ownTodos = state.todosFor(day)
-                val visibleItems = if (hideDone) items.filter { !it.done } else items
-                val visibleTodos = if (hideDone) ownTodos.filter { !it.done } else ownTodos
+                // Ausgeblendet wird alles Bewertete: erledigt oder ausdrücklich nicht geschafft.
+                val visibleItems = if (hideDone) items.filter { !it.resolved } else items
+                val visibleTodos = if (hideDone) ownTodos.filter { !it.done && !it.failed } else ownTodos
                 val total = items.size + ownTodos.size
                 val doneCount = items.count { it.done } + ownTodos.count { it.done }
                 val adding = addingDay == day
@@ -213,7 +217,13 @@ fun TodayScreen(
                     Panel {
                         if (visibleItems.isEmpty() && visibleTodos.isEmpty() && !adding) {
                             Text(
-                                stringResource(if (total == 0) R.string.nothing_planned else R.string.all_done),
+                                stringResource(
+                                    when {
+                                        total == 0 -> R.string.nothing_planned
+                                        doneCount == total -> R.string.all_done
+                                        else -> R.string.nothing_open
+                                    }
+                                ),
                                 modifier = Modifier.padding(16.dp),
                                 style = AppType.body,
                                 color = c.textSecondary,
@@ -224,13 +234,26 @@ fun TodayScreen(
                                 if (index > 0) {
                                     Hairline(startInset = 54.dp)
                                 }
+                                // Die Serie steht nur an den täglichen Handlungen von heute.
+                                val streakDays = if (isToday && item.action.period == Period.DAILY) {
+                                    remember(item.action, state.completions, state.failures, today) {
+                                        state.historyOf(item.action).streak().current
+                                    }
+                                } else {
+                                    0
+                                }
                                 TaskRow(
                                     title = item.action.title,
                                     subtitle = item.goal.title + " · " +
                                         frequencyText(item.action.period, item.action.times),
-                                    done = item.done,
+                                    mark = item.mark,
                                     enabled = day <= today,
-                                    onToggle = { onToggleDone(item.action.id, day) },
+                                    onToggle = { onCycleMark(item.action.id, day) },
+                                    trailing = if (streakDays > 0) {
+                                        pluralStringResource(R.plurals.streak_days, streakDays, streakDays)
+                                    } else {
+                                        null
+                                    },
                                 )
                             }
                         }
@@ -242,7 +265,7 @@ fun TodayScreen(
                                 TaskRow(
                                     title = todo.title,
                                     subtitle = null,
-                                    done = todo.done,
+                                    mark = todoMark(todo),
                                     enabled = true,
                                     onToggle = { onToggleTodo(todo.id) },
                                     onRemove = { onDeleteTodo(todo.id) },
@@ -346,7 +369,7 @@ private fun NewTodoRow(onSubmit: (String) -> Unit, onClose: () -> Unit) {
             .padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CheckMark(false)
+        CheckMark(Mark.NONE)
         TextField(
             value = text,
             onValueChange = { text = it },

@@ -59,8 +59,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putBoolean("hide_done", next).apply()
     }
 
+    /** Schaltet „erledigt" für einen Tag um (Tageskreise der Wochen- und Monatshandlungen). */
     fun toggleDone(actionId: Long, day: Long) {
-        change { toggleRef(Db.COMPLETIONS, actionId, day) }
+        change { toggleDone(actionId, day) }
+    }
+
+    /** Schaltet die Bewertung weiter: offen → erledigt (Haken) → nicht geschafft (Kreuz) → offen. */
+    fun cycleMark(actionId: Long, day: Long) {
+        val current = _state.value
+        val action = current.actions.firstOrNull { it.id == actionId } ?: return
+        val missedWhenOpen = current.missedWhenOpen(action, day)
+        change { cycleMark(actionId, day, missedWhenOpen) }
     }
 
     fun togglePlan(actionId: Long, day: Long) {
@@ -119,6 +128,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             goals = db.loadGoals(),
             actions = db.loadActions(),
             completions = db.loadAllRefs(Db.COMPLETIONS),
+            failures = db.loadAllRefs(Db.FAILURES),
             plans = db.loadRefs(Db.PLANS, from, to),
             todos = db.loadTodos(),
         )

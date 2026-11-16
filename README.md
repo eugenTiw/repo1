@@ -8,6 +8,8 @@ Leitgedanke: **Deine Daten bleiben bei dir.** Die App arbeitet vollständig offl
 - **Ziele** mit Lebensbereich, optionalem Zieltermin und einem Kriterium („Erreicht, wenn …").
 - **Handlungen** je Ziel mit Häufigkeit: täglich, x-mal pro Woche oder x-mal pro Monat.
 - **Heute:** die ganze Woche auf einen Blick, jeder Tag mit seinen To-dos. Tägliche Handlungen erscheinen automatisch; Erledigtes wird durchgestrichen und lässt sich über das Auge ausblenden.
+- **Geschafft oder nicht:** Tippen schaltet eine Aufgabe weiter: offen, erledigt (grüner Haken), nicht geschafft (rotes Kreuz). Vergangene, nicht abgehakte Tage täglicher Handlungen zeigen von selbst ein rotes Kreuz.
+- **Serie:** tägliche Handlungen zeigen heute, wie viele Tage in Folge sie erledigt wurden. In der Monatsübersicht stehen aktuelle und längste Serie je Handlung, gezählt in Tagen, Wochen oder Monaten.
 - **Wochen- und Monatshandlungen zuteilen:** oben per Tipp einem Wochentag zuordnen; vergangene Tage lassen sich nachträglich abhaken. Ist die Vorgabe erfüllt, wird die Handlung durchgestrichen.
 - **Eigene To-dos:** über das Plus an jedem Tag, unabhängig von Zielen.
 - **Verlauf:** über das Kalendersymbol; Monatskalender über alle Ziele mit Auswertung je Tag, Woche und Monat.

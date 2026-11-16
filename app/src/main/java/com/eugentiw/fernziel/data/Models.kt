@@ -31,13 +31,17 @@ data class GoalAction(
     val reminderMinutes: Int? = null,
 )
 
-/** Eigenes To-do für einen bestimmten Tag, unabhängig von Zielen. */
+/**
+ * Eigenes To-do für einen bestimmten Tag, unabhängig von Zielen.
+ * [failed] heißt: ausdrücklich als nicht geschafft markiert. [done] und [failed] sind nie beide wahr.
+ */
 data class Todo(
     val id: Long = 0,
     val title: String,
     val day: Long,
     val done: Boolean = false,
+    val failed: Boolean = false,
 )
 
-/** Verknüpft eine Handlung mit einem Tag (erledigt oder eingeplant). */
+/** Verknüpft eine Handlung mit einem Tag (erledigt, nicht geschafft oder eingeplant). */
 data class DayRef(val actionId: Long, val day: Long)
