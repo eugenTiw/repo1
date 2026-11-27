@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,10 +50,17 @@ import com.eugentiw.fernziel.R
 import com.eugentiw.fernziel.data.Category
 import com.eugentiw.fernziel.data.Goal
 import com.eugentiw.fernziel.data.GoalAction
+import com.eugentiw.fernziel.data.Level
 import com.eugentiw.fernziel.data.Period
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+
+/** Bearbeitungsstand eines Levels im Editor. */
+private class LevelDraft(title: String, length: Int) {
+    var title by mutableStateOf(title)
+    var length by mutableIntStateOf(length)
+}
 
 /** Bearbeitungsstand einer Handlung im Editor. */
 private class ActionDraft(
@@ -62,11 +70,23 @@ private class ActionDraft(
     period: Period,
     times: Int,
     reminder: Int?,
+    levels: List<Level> = emptyList(),
+    val levelsSince: Long? = null,
 ) {
     var reminder by mutableStateOf(reminder)
     var title by mutableStateOf(title)
     var period by mutableStateOf(period)
     var times by mutableIntStateOf(times)
+    val levels = mutableStateListOf<LevelDraft>().apply {
+        levels.forEach { add(LevelDraft(it.title, it.length)) }
+    }
+}
+
+/** Übliche Dauer eines Levels: zwei Wochen, vier Wochen oder drei Monate am Stück. */
+private fun defaultLength(period: Period): Int = when (period) {
+    Period.DAILY -> 14
+    Period.WEEKLY -> 4
+    Period.MONTHLY -> 3
 }
 
 /** Legt ein Ziel an oder bearbeitet es: Titel, Lebensbereich, Zieltermin und Handlungen. */
@@ -90,7 +110,18 @@ fun GoalEditorScreen(
         val list = mutableStateListOf<ActionDraft>()
         if (existing != null) {
             state.actionsOf(existing.id).forEach { action ->
-                list.add(ActionDraft(action.id, action.createdDay, action.title, action.period, action.times, action.reminderMinutes))
+                list.add(
+                    ActionDraft(
+                        action.id,
+                        action.createdDay,
+                        action.title,
+                        action.period,
+                        action.times,
+                        action.reminderMinutes,
+                        action.levels,
+                        action.levelsSince,
+                    )
+                )
             }
         }
         if (list.isEmpty()) {
@@ -129,6 +160,9 @@ fun GoalEditorScreen(
         val actions = drafts
             .filter { it.title.isNotBlank() }
             .map { draft ->
+                val levels = draft.levels
+                    .filter { it.title.isNotBlank() }
+                    .map { Level(it.title.trim(), it.length.coerceAtLeast(1)) }
                 GoalAction(
                     id = draft.id,
                     title = draft.title.trim(),
@@ -136,6 +170,9 @@ fun GoalEditorScreen(
                     times = if (draft.period == Period.DAILY) 1 else draft.times,
                     createdDay = draft.createdDay,
                     reminderMinutes = draft.reminder,
+                    levels = levels,
+                    // Level zählen ab dem Tag, an dem sie eingeführt wurden.
+                    levelsSince = if (levels.isEmpty()) null else (draft.levelsSince ?: state.today),
                 )
             }
         onSave(goal, actions)
@@ -380,6 +417,8 @@ private fun ActionEditor(
             }
         }
         Hairline()
+        LevelEditor(draft)
+        Hairline()
         Row(
             Modifier
                 .fillMaxWidth()
@@ -431,6 +470,119 @@ private fun ActionEditor(
                 draft.reminder = null
                 showTime = false
             },
+        )
+    }
+}
+
+/**
+ * Level einer Handlung: Stufen von leicht nach schwer. Jedes Level außer dem höchsten hat
+ * eine Dauer, die man am Stück schaffen muss, um aufzusteigen.
+ */
+@Composable
+private fun LevelEditor(draft: ActionDraft) {
+    val c = LocalAppColors.current
+    val levels = draft.levels
+    if (levels.isEmpty()) {
+        TextAction(
+            text = stringResource(R.string.levels_add_first),
+            color = c.accent,
+            onClick = {
+                val length = defaultLength(draft.period)
+                levels.add(LevelDraft(draft.title.trim(), length))
+                levels.add(LevelDraft("", length))
+            },
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+        return
+    }
+    val unit = when (draft.period) {
+        Period.DAILY -> R.plurals.streak_days
+        Period.WEEKLY -> R.plurals.streak_weeks
+        Period.MONTHLY -> R.plurals.streak_months
+    }
+    Column(Modifier.padding(top = 12.dp)) {
+        Text(
+            stringResource(R.string.levels_title).uppercase(),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            style = AppType.overline,
+            color = c.textSecondary,
+        )
+        Text(
+            stringResource(R.string.levels_hint),
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp),
+            style = AppType.caption,
+            color = c.textSecondary,
+        )
+        levels.forEachIndexed { index, level ->
+            key(level) {
+                val isTop = index == levels.size - 1
+                Row(
+                    Modifier.padding(start = 16.dp, top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        (index + 1).toString(),
+                        modifier = Modifier.width(18.dp),
+                        style = AppType.subhead,
+                        color = c.accent,
+                    )
+                    PlainField(
+                        value = level.title,
+                        onValueChange = { level.title = it },
+                        placeholder = stringResource(R.string.level_placeholder),
+                        modifier = Modifier.weight(1f),
+                    )
+                    GlyphButton(
+                        glyph = Glyph.CLOSE,
+                        label = stringResource(R.string.level_remove),
+                        tint = c.textTertiary,
+                        onClick = { levels.remove(level) },
+                        glyphSize = 11.dp,
+                    )
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 34.dp, end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isTop) {
+                        Text(
+                            stringResource(R.string.level_top),
+                            modifier = Modifier.padding(bottom = 4.dp),
+                            style = AppType.caption,
+                            color = c.textSecondary,
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.level_length) + " " +
+                                pluralStringResource(unit, level.length, level.length),
+                            modifier = Modifier.weight(1f),
+                            style = AppType.subhead,
+                            color = c.text,
+                        )
+                        Stepper(
+                            value = level.length,
+                            min = 1,
+                            max = when (draft.period) {
+                                Period.DAILY -> 90
+                                Period.WEEKLY -> 52
+                                Period.MONTHLY -> 24
+                            },
+                            onChange = { level.length = it },
+                        )
+                    }
+                }
+            }
+        }
+        TextAction(
+            text = stringResource(R.string.level_add),
+            color = c.accent,
+            onClick = {
+                val previous = levels.lastOrNull()
+                levels.add(LevelDraft("", previous?.length ?: defaultLength(draft.period)))
+            },
+            modifier = Modifier.padding(horizontal = 8.dp),
         )
     }
 }

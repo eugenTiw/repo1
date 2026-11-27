@@ -35,7 +35,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -234,26 +233,14 @@ fun TodayScreen(
                                 if (index > 0) {
                                     Hairline(startInset = 54.dp)
                                 }
-                                // Die Serie steht nur an den täglichen Handlungen von heute.
-                                val streakDays = if (isToday && item.action.period == Period.DAILY) {
-                                    remember(item.action, state.completions, state.failures, today) {
-                                        state.historyOf(item.action).streak().current
-                                    }
-                                } else {
-                                    0
-                                }
                                 TaskRow(
-                                    title = item.action.title,
-                                    subtitle = item.goal.title + " · " +
-                                        frequencyText(item.action.period, item.action.times),
+                                    title = state.titleOn(item.action, day),
+                                    subtitle = actionSubtitle(state, item.action, item.goal, day),
                                     mark = item.mark,
                                     enabled = day <= today,
                                     onToggle = { onCycleMark(item.action.id, day) },
-                                    trailing = if (streakDays > 0) {
-                                        pluralStringResource(R.plurals.streak_days, streakDays, streakDays)
-                                    } else {
-                                        null
-                                    },
+                                    // Fortschritt und Serie stehen nur an den Handlungen von heute.
+                                    trailing = if (isToday) todayTrailing(state, item.action) else null,
                                 )
                             }
                         }
@@ -436,13 +423,13 @@ private fun AssignRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    action.title,
+                    state.titleOn(action, state.today),
                     style = AppType.body,
                     color = if (reached) c.textSecondary else c.text,
                     textDecoration = if (reached) TextDecoration.LineThrough else TextDecoration.None,
                 )
                 Text(
-                    goal.title + " · " + frequencyText(action.period, action.times),
+                    actionSubtitle(state, action, goal, state.today),
                     style = AppType.caption,
                     color = c.textSecondary,
                     maxLines = 1,
@@ -547,13 +534,13 @@ private fun MonthAssignRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    action.title,
+                    state.titleOn(action, state.today),
                     style = AppType.body,
                     color = if (reached) c.textSecondary else c.text,
                     textDecoration = if (reached) TextDecoration.LineThrough else TextDecoration.None,
                 )
                 Text(
-                    goal.title + " · " + frequencyText(action.period, action.times),
+                    actionSubtitle(state, action, goal, state.today),
                     style = AppType.caption,
                     color = c.textSecondary,
                     maxLines = 1,

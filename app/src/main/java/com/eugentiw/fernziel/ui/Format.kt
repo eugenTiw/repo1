@@ -1,11 +1,14 @@
 package com.eugentiw.fernziel.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.eugentiw.fernziel.AppState
 import com.eugentiw.fernziel.Mark
 import com.eugentiw.fernziel.R
 import com.eugentiw.fernziel.data.Category
 import com.eugentiw.fernziel.data.Goal
+import com.eugentiw.fernziel.data.GoalAction
 import com.eugentiw.fernziel.data.Period
 import com.eugentiw.fernziel.data.Todo
 import java.time.LocalDate
@@ -56,6 +59,51 @@ fun deadlineText(goal: Goal, today: Long): String {
         else -> stringResource(R.string.overdue_other, -diff)
     }
     return formatDay(target) + " · " + relative
+}
+
+/**
+ * Unterzeile einer Handlung an einem Tag: Ziel, bei Level-Handlungen das damals gültige
+ * Level, und die Häufigkeit. Beispiel: „Gesunder Schlaf · Level 2/4 · Täglich".
+ */
+@Composable
+fun actionSubtitle(state: AppState, action: GoalAction, goal: Goal, day: Long): String {
+    val progress = state.levelProgressOf(action)
+    val level = if (progress != null) {
+        stringResource(R.string.level_short, progress.levelAt(day) + 1, progress.total) + " · "
+    } else {
+        ""
+    }
+    return goal.title + " · " + level + frequencyText(action.period, action.times)
+}
+
+/** Fortschritt im aktuellen Level, z. B. „4/7 Tage". */
+@Composable
+fun levelProgressText(period: Period, count: Int, needed: Int): String {
+    val res = when (period) {
+        Period.DAILY -> R.plurals.level_progress_days
+        Period.WEEKLY -> R.plurals.level_progress_weeks
+        Period.MONTHLY -> R.plurals.level_progress_months
+    }
+    return pluralStringResource(res, needed, count, needed)
+}
+
+/**
+ * Zusatz rechts an einer Handlung von heute: Fortschritt zum nächsten Level, „Level geschafft",
+ * oder im höchsten Level bzw. ohne Level die Serie täglicher Handlungen.
+ */
+@Composable
+fun todayTrailing(state: AppState, action: GoalAction): String? {
+    val progress = state.levelProgressOf(action)
+    if (progress != null) {
+        val needed = progress.needed
+        if (progress.levelAt(state.today) < progress.index) return stringResource(R.string.level_done_today)
+        if (needed != null) return levelProgressText(action.period, progress.count, needed)
+        if (action.period != Period.DAILY) return null
+        return if (progress.count > 0) pluralStringResource(R.plurals.streak_days, progress.count, progress.count) else null
+    }
+    if (action.period != Period.DAILY) return null
+    val days = state.historyOf(action).streak().current
+    return if (days > 0) pluralStringResource(R.plurals.streak_days, days, days) else null
 }
 
 /** Anzeige eines eigenen To-dos: grüner Haken, rotes Kreuz oder offen. */

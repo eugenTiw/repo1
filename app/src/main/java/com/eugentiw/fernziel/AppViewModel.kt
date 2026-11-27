@@ -43,6 +43,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putStringSet("collapsed", HashSet(next)).apply()
     }
 
+    // Kurzer Hinweis nach einem Level-Aufstieg; verschwindet von selbst.
+    private val _levelUp = MutableStateFlow<LevelUp?>(null)
+    val levelUp: StateFlow<LevelUp?> = _levelUp.asStateFlow()
+
+    fun dismissLevelUp() {
+        _levelUp.value = null
+    }
+
     init {
         refresh()
     }
@@ -61,7 +69,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Schaltet „erledigt" für einen Tag um (Tageskreise der Wochen- und Monatshandlungen). */
     fun toggleDone(actionId: Long, day: Long) {
-        change { toggleDone(actionId, day) }
+        change(celebrate = true) { toggleDone(actionId, day) }
     }
 
     /** Schaltet die Bewertung weiter: offen → erledigt (Haken) → nicht geschafft (Kreuz) → offen. */
@@ -69,7 +77,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val current = _state.value
         val action = current.actions.firstOrNull { it.id == actionId } ?: return
         val missedWhenOpen = current.missedWhenOpen(action, day)
-        change { cycleMark(actionId, day, missedWhenOpen) }
+        change(celebrate = true) { cycleMark(actionId, day, missedWhenOpen) }
     }
 
     fun togglePlan(actionId: Long, day: Long) {
@@ -103,18 +111,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         change { removeTodo(todoId) }
     }
 
-    /** Führt eine Änderung aus und lädt danach den Zustand neu, streng nacheinander. */
-    private fun change(block: Db.() -> Unit) {
+    /**
+     * Führt eine Änderung aus und lädt danach den Zustand neu, streng nacheinander.
+     * Mit [celebrate] wird geprüft, ob die Änderung zu einem Level-Aufstieg geführt hat.
+     */
+    private fun change(celebrate: Boolean = false, block: Db.() -> Unit) {
         viewModelScope.launch {
             mutex.withLock {
-                _state.value = withContext(Dispatchers.IO) {
+                val before = _state.value
+                val next = withContext(Dispatchers.IO) {
                     db.block()
-                    val next = load()
-                    Reminders.sync(getApplication<Application>(), next.activeActions.map { it.first })
-                    next
+                    val loaded = load()
+                    Reminders.sync(getApplication<Application>(), loaded.activeActions.map { it.first })
+                    loaded
+                }
+                _state.value = next
+                if (celebrate && before.loaded) {
+                    val up = findLevelUp(before, next)
+                    if (up != null) _levelUp.value = up
                 }
             }
         }
+    }
+
+    /** Die erste Handlung, die zwischen [before] und [after] ein Level aufgestiegen ist. */
+    private fun findLevelUp(before: AppState, after: AppState): LevelUp? {
+        for (pair in after.activeActions) {
+            val action = pair.first
+            val now = after.levelProgressOf(action) ?: continue
+            val old = before.actions.firstOrNull { it.id == action.id }?.let { before.levelProgressOf(it) } ?: continue
+            if (now.index > old.index) {
+                return LevelUp(action.id, now.index + 1, now.total, levelTitle(action, now.index), action.period)
+            }
+        }
+        return null
     }
 
     private fun load(): AppState {

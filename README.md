@@ -10,6 +10,7 @@ Leitgedanke: **Deine Daten bleiben bei dir.** Die App arbeitet vollständig offl
 - **Heute:** die ganze Woche auf einen Blick, jeder Tag mit seinen To-dos. Tägliche Handlungen erscheinen automatisch; Erledigtes wird durchgestrichen und lässt sich über das Auge ausblenden.
 - **Geschafft oder nicht:** Tippen schaltet eine Aufgabe weiter: offen, erledigt (grüner Haken), nicht geschafft (rotes Kreuz). Vergangene, nicht abgehakte Tage täglicher Handlungen zeigen von selbst ein rotes Kreuz.
 - **Serie:** tägliche Handlungen zeigen heute, wie viele Tage in Folge sie erledigt wurden. In der Monatsübersicht stehen aktuelle und längste Serie je Handlung, gezählt in Tagen, Wochen oder Monaten.
+- **Level:** Jede Handlung kann eigene Stufen bekommen, z. B. „vor 8:00 aufstehen" (14 Tage am Stück), dann „vor 7:30" (7 Tage), bis zum Ziel „um 6:00". Wer ein Level die festgelegte Zeit am Stück schafft, steigt ab dem nächsten Tag (bzw. der nächsten Woche oder dem nächsten Monat) auf. Ein verpasster Tag setzt nur die Serie zurück, nie das Level; im höchsten Level bleibt man. Heute zeigt den Text des aktuellen Levels und den Fortschritt, die Monatsübersicht die ganze Stufenleiter.
 - **Wochen- und Monatshandlungen zuteilen:** oben per Tipp einem Wochentag zuordnen; vergangene Tage lassen sich nachträglich abhaken. Ist die Vorgabe erfüllt, wird die Handlung durchgestrichen.
 - **Eigene To-dos:** über das Plus an jedem Tag, unabhängig von Zielen.
 - **Verlauf:** über das Kalendersymbol; Monatskalender über alle Ziele mit Auswertung je Tag, Woche und Monat.

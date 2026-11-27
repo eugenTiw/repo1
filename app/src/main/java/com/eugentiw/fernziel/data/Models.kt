@@ -29,7 +29,18 @@ data class GoalAction(
     val createdDay: Long = 0,
     /** Uhrzeit der freiwilligen Erinnerung in Minuten seit Mitternacht, oder null. */
     val reminderMinutes: Int? = null,
+    /** Selbst festgelegte Stufen, von leicht nach schwer. Leer heißt: keine Level. */
+    val levels: List<Level> = emptyList(),
+    /** Tag, ab dem die Level zählen. Früherer Verlauf wird für den Aufstieg nicht gewertet. */
+    val levelsSince: Long? = null,
 )
+
+/**
+ * Eine Stufe einer Handlung, z. B. „Vor 8:00 aufstehen".
+ * [length]: wie viele Zeiträume (Tage, Wochen oder Monate) am Stück nötig sind, um
+ * aufzusteigen. Beim höchsten Level hat der Wert keine Bedeutung: dort bleibt man.
+ */
+data class Level(val title: String, val length: Int)
 
 /**
  * Eigenes To-do für einen bestimmten Tag, unabhängig von Zielen.

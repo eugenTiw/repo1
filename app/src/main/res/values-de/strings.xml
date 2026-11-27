@@ -69,6 +69,37 @@
     <string name="nothing_open">Nichts mehr offen.</string>
     <string name="streak_current">Aktuelle Serie</string>
     <string name="streak_best">Längste Serie</string>
+
+    <string name="levels_title">Level</string>
+    <string name="levels_add_first">Level festlegen</string>
+    <string name="levels_hint">Schaffst du ein Level die angegebene Zeit am Stück, steigst du auf. Ein verpasster Tag setzt nur die Serie zurück, nicht das Level. Im höchsten Level bleibst du.</string>
+    <string name="level_placeholder">Was gilt in diesem Level?</string>
+    <string name="level_length">Am Stück:</string>
+    <string name="level_top">Höchstes Level: Hier bleibst du.</string>
+    <string name="level_add">Level hinzufügen</string>
+    <string name="level_remove">Level entfernen</string>
+    <string name="level_short">Level %1$d/%2$d</string>
+    <string name="level_of">%1$d von %2$d</string>
+    <string name="level_passed">Geschafft</string>
+    <string name="level_top_short">Höchstes Level</string>
+    <string name="level_done_today">Level geschafft</string>
+    <string name="levelup_title">Level %1$d von %2$d erreicht</string>
+    <string name="levelup_max">Höchstes Level erreicht</string>
+    <string name="levelup_next_day">Ab morgen: %1$s</string>
+    <string name="levelup_next_week">Ab nächster Woche: %1$s</string>
+    <string name="levelup_next_month">Ab nächstem Monat: %1$s</string>
+    <plurals name="level_progress_days">
+        <item quantity="one">%1$d/%2$d Tag</item>
+        <item quantity="other">%1$d/%2$d Tage</item>
+    </plurals>
+    <plurals name="level_progress_weeks">
+        <item quantity="one">%1$d/%2$d Woche</item>
+        <item quantity="other">%1$d/%2$d Wochen</item>
+    </plurals>
+    <plurals name="level_progress_months">
+        <item quantity="one">%1$d/%2$d Monat</item>
+        <item quantity="other">%1$d/%2$d Monate</item>
+    </plurals>
     <plurals name="streak_days">
         <item quantity="one">%d Tag</item>
         <item quantity="other">%d Tage</item>
