@@ -93,6 +93,30 @@ data class AppState(
     /** Alle Tage, die ausdrücklich als nicht geschafft markiert wurden. */
     fun failedDaysOf(actionId: Long): Set<Long> = failedDaysByAction[actionId] ?: emptySet()
 
+    private val progressByAction: Map<Long, LevelProgress> by lazy {
+        val out = HashMap<Long, LevelProgress>()
+        for (action in actions) {
+            val progress = levelProgress(action, doneDaysOf(action.id), failedDaysOf(action.id), today)
+            if (progress != null) out[action.id] = progress
+        }
+        out
+    }
+
+    /** Level-Stand einer Handlung, oder null, wenn sie keine Level hat. */
+    fun levelProgressOf(action: GoalAction): LevelProgress? = progressByAction[action.id]
+
+    /** Was die Handlung an [day] verlangte: der Text des damals gültigen Levels oder ihr Name. */
+    fun titleOn(action: GoalAction, day: Long): String {
+        val progress = levelProgressOf(action) ?: return action.title
+        return levelTitle(action, progress.levelAt(day))
+    }
+
+    /** Text des aktuellen Levels bzw. der Name der Handlung ohne Level. */
+    fun currentTitle(action: GoalAction): String {
+        val progress = levelProgressOf(action) ?: return action.title
+        return levelTitle(action, progress.index)
+    }
+
     /** Verlauf einer Handlung mit Kalenderbewertung und Serie. */
     fun historyOf(action: GoalAction): ActionHistory =
         ActionHistory(action, doneDaysOf(action.id), today, failedDaysOf(action.id))

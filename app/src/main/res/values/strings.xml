@@ -71,6 +71,37 @@
     <string name="nothing_open">Nothing left open.</string>
     <string name="streak_current">Current streak</string>
     <string name="streak_best">Longest streak</string>
+
+    <string name="levels_title">Levels</string>
+    <string name="levels_add_first">Set up levels</string>
+    <string name="levels_hint">Complete a level for the given time in a row to move up. A missed day only resets the streak, not the level. You stay on the top level.</string>
+    <string name="level_placeholder">What applies at this level?</string>
+    <string name="level_length">In a row:</string>
+    <string name="level_top">Top level: you stay here.</string>
+    <string name="level_add">Add level</string>
+    <string name="level_remove">Remove level</string>
+    <string name="level_short">Level %1$d/%2$d</string>
+    <string name="level_of">%1$d of %2$d</string>
+    <string name="level_passed">Done</string>
+    <string name="level_top_short">Top level</string>
+    <string name="level_done_today">Level complete</string>
+    <string name="levelup_title">Level %1$d of %2$d reached</string>
+    <string name="levelup_max">Top level reached</string>
+    <string name="levelup_next_day">From tomorrow: %1$s</string>
+    <string name="levelup_next_week">From next week: %1$s</string>
+    <string name="levelup_next_month">From next month: %1$s</string>
+    <plurals name="level_progress_days">
+        <item quantity="one">%1$d/%2$d day</item>
+        <item quantity="other">%1$d/%2$d days</item>
+    </plurals>
+    <plurals name="level_progress_weeks">
+        <item quantity="one">%1$d/%2$d week</item>
+        <item quantity="other">%1$d/%2$d weeks</item>
+    </plurals>
+    <plurals name="level_progress_months">
+        <item quantity="one">%1$d/%2$d month</item>
+        <item quantity="other">%1$d/%2$d months</item>
+    </plurals>
     <plurals name="streak_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>

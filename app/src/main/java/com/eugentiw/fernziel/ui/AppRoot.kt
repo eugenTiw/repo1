@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,9 +19,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -28,11 +31,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.eugentiw.fernziel.AppViewModel
+import com.eugentiw.fernziel.LevelUp
 import com.eugentiw.fernziel.R
+import com.eugentiw.fernziel.data.Period
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -45,6 +55,7 @@ fun AppRoot(viewModel: AppViewModel) {
     val state by viewModel.state.collectAsState()
     val hideDone by viewModel.hideDone.collectAsState()
     val collapsed by viewModel.collapsed.collectAsState()
+    val levelUp by viewModel.levelUp.collectAsState()
     val c = LocalAppColors.current
 
     // Diese Zustände liegen bewusst hier oben, damit Seite und Scrollposition
@@ -156,6 +167,57 @@ fun AppRoot(viewModel: AppViewModel) {
                 )
             }
         }
+
+        val current = levelUp
+        if (current != null) {
+            LaunchedEffect(current) {
+                delay(4500)
+                viewModel.dismissLevelUp()
+            }
+            LevelUpBanner(
+                levelUp = current,
+                onDismiss = { viewModel.dismissLevelUp() },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .safeDrawingPadding()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 76.dp),
+            )
+        }
+    }
+}
+
+/** Kurzer Hinweis nach einem Level-Aufstieg. Tippen schließt ihn, sonst verschwindet er von selbst. */
+@Composable
+private fun LevelUpBanner(levelUp: LevelUp, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    val c = LocalAppColors.current
+    val next = when (levelUp.period) {
+        Period.DAILY -> R.string.levelup_next_day
+        Period.WEEKLY -> R.string.levelup_next_week
+        Period.MONTHLY -> R.string.levelup_next_month
+    }
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(c.success)
+            .clickable(onClick = onDismiss)
+            .semantics { liveRegion = LiveRegionMode.Polite }
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+    ) {
+        Text(
+            if (levelUp.isMax) {
+                stringResource(R.string.levelup_max)
+            } else {
+                stringResource(R.string.levelup_title, levelUp.number, levelUp.total)
+            },
+            style = AppType.headline,
+            color = c.onSuccess,
+        )
+        Text(
+            stringResource(next, levelUp.title),
+            style = AppType.subhead,
+            color = c.onSuccess,
+        )
     }
 }
 

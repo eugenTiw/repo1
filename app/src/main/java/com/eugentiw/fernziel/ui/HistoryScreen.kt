@@ -328,8 +328,8 @@ private fun DayPanel(
                 Hairline(startInset = 54.dp)
             }
             TaskRow(
-                title = item.action.title,
-                subtitle = item.goal.title + " · " + frequencyText(item.action.period, item.action.times),
+                title = state.titleOn(item.action, day),
+                subtitle = actionSubtitle(state, item.action, item.goal, day),
                 mark = item.mark,
                 enabled = day <= state.today,
                 onToggle = { onCycleMark(item.action.id, day) },

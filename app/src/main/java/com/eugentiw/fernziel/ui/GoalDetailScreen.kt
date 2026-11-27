@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eugentiw.fernziel.ActionHistory
 import com.eugentiw.fernziel.AppState
+import com.eugentiw.fernziel.LevelProgress
 import com.eugentiw.fernziel.Mark
 import com.eugentiw.fernziel.R
 import com.eugentiw.fernziel.Streak
@@ -183,6 +184,16 @@ fun GoalDetailScreen(
                 Panel {
                     StreakRow(action.period, streak)
                 }
+                val progress = state.levelProgressOf(action)
+                if (progress != null) {
+                    SectionHeader(
+                        text = stringResource(R.string.levels_title),
+                        trailing = stringResource(R.string.level_of, progress.index + 1, progress.total).uppercase(),
+                    )
+                    Panel {
+                        LevelLadder(action, progress)
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 Panel {
                     MonthCalendar(
@@ -212,6 +223,89 @@ fun GoalDetailScreen(
                 }
                 Legend()
             }
+        }
+    }
+}
+
+/**
+ * Die Stufen einer Handlung: geschaffte Level mit grünem Haken, das aktuelle mit seinem
+ * Fortschritt, kommende ausgegraut mit ihrer Dauer.
+ */
+@Composable
+private fun LevelLadder(action: GoalAction, progress: LevelProgress) {
+    val c = LocalAppColors.current
+    val unit = when (action.period) {
+        Period.DAILY -> R.plurals.streak_days
+        Period.WEEKLY -> R.plurals.streak_weeks
+        Period.MONTHLY -> R.plurals.streak_months
+    }
+    action.levels.forEachIndexed { index, level ->
+        if (index > 0) {
+            Hairline(startInset = 54.dp)
+        }
+        val passed = index < progress.index
+        val current = index == progress.index
+        val isTop = index == action.levels.size - 1
+        val needed = progress.needed
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LevelBadge(index + 1, passed, current)
+            Spacer(Modifier.width(14.dp))
+            Text(
+                level.title.ifBlank { action.title },
+                modifier = Modifier.weight(1f),
+                style = AppType.body,
+                fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (passed || current) c.text else c.textSecondary,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                when {
+                    passed -> stringResource(R.string.level_passed)
+                    current && needed != null -> levelProgressText(action.period, progress.count, needed)
+                    isTop -> stringResource(R.string.level_top_short)
+                    else -> pluralStringResource(unit, level.length, level.length)
+                },
+                style = AppType.caption,
+                fontWeight = if (current) FontWeight.Medium else FontWeight.Normal,
+                color = when {
+                    passed -> c.success
+                    current -> c.accent
+                    else -> c.textTertiary
+                },
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/** Nummer eines Levels: grün mit Haken (geschafft), Akzent-Ring (aktuell) oder grau (kommend). */
+@Composable
+private fun LevelBadge(number: Int, passed: Boolean, current: Boolean) {
+    val c = LocalAppColors.current
+    val ring = if (current) c.accent else Color.Transparent
+    Box(
+        Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(if (passed) c.success else if (current) Color.Transparent else c.fill)
+            .border(1.5.dp, ring, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (passed) {
+            val check = c.onSuccess
+            Canvas(Modifier.size(12.dp)) { drawGlyph(Glyph.CHECK, check) }
+        } else {
+            Text(
+                number.toString(),
+                style = AppType.caption,
+                fontWeight = FontWeight.SemiBold,
+                color = if (current) c.accent else c.textSecondary,
+            )
         }
     }
 }

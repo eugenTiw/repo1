@@ -132,13 +132,15 @@ private fun GoalCard(state: AppState, goal: Goal, onOpen: (Long) -> Unit) {
                     actions.forEach { action ->
                         Row(Modifier.padding(vertical = 2.dp)) {
                             Text(
-                                action.title,
+                                state.currentTitle(action),
                                 modifier = Modifier.weight(1f),
                                 style = AppType.subhead,
                                 color = c.text,
                             )
                             Text(
-                                frequencyText(action.period, action.times),
+                                state.levelProgressOf(action)?.let { progress ->
+                                    stringResource(R.string.level_short, progress.index + 1, progress.total) + " · "
+                                }.orEmpty() + frequencyText(action.period, action.times),
                                 modifier = Modifier.padding(start = 12.dp),
                                 style = AppType.subhead,
                                 color = c.textSecondary,

@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper
  * Lokale SQLite-Datenbank. Alle Daten liegen ausschließlich im privaten
  * App-Speicher des Geräts; es gibt keinerlei Netzwerkzugriff.
  */
-class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 4) {
+class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernziel.db", null, 5) {
 
     companion object {
         const val COMPLETIONS = "completions"
@@ -43,7 +43,8 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 "times INTEGER NOT NULL, " +
                 "position INTEGER NOT NULL DEFAULT 0, " +
                 "created_day INTEGER NOT NULL DEFAULT 0, " +
-                "reminder_minutes INTEGER)"
+                "reminder_minutes INTEGER, " +
+                "levels_since INTEGER)"
         )
         db.execSQL(
             "CREATE TABLE completions(" +
@@ -59,6 +60,18 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
         )
         createTodos(db)
         createFailures(db)
+        createLevels(db)
+    }
+
+    private fun createLevels(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE levels(" +
+                "action_id INTEGER NOT NULL REFERENCES actions(id) ON DELETE CASCADE, " +
+                "position INTEGER NOT NULL, " +
+                "title TEXT NOT NULL, " +
+                "length INTEGER NOT NULL, " +
+                "PRIMARY KEY(action_id, position))"
+        )
     }
 
     private fun createFailures(db: SQLiteDatabase) {
@@ -99,6 +112,11 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
             // Version 4: Tage lassen sich ausdrücklich als „nicht geschafft" markieren.
             createFailures(db)
         }
+        if (oldVersion < 5) {
+            // Version 5: selbst festgelegte Level je Handlung.
+            createLevels(db)
+            db.execSQL("ALTER TABLE actions ADD COLUMN levels_since INTEGER")
+        }
     }
 
     fun loadGoals(): List<Goal> {
@@ -126,9 +144,18 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
     }
 
     fun loadActions(): List<GoalAction> {
+        val levels = HashMap<Long, ArrayList<Level>>()
+        readableDatabase.rawQuery(
+            "SELECT action_id, title, length FROM levels ORDER BY action_id, position",
+            null,
+        ).use { c ->
+            while (c.moveToNext()) {
+                levels.getOrPut(c.getLong(0)) { ArrayList() }.add(Level(c.getString(1), c.getInt(2)))
+            }
+        }
         val out = ArrayList<GoalAction>()
         readableDatabase.rawQuery(
-            "SELECT id, goal_id, title, period, times, position, created_day, reminder_minutes " +
+            "SELECT id, goal_id, title, period, times, position, created_day, reminder_minutes, levels_since " +
                 "FROM actions ORDER BY goal_id, position, id",
             null,
         ).use { c ->
@@ -143,6 +170,8 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                         position = c.getInt(5),
                         createdDay = c.getLong(6),
                         reminderMinutes = if (c.isNull(7)) null else c.getInt(7),
+                        levels = levels[c.getLong(0)] ?: emptyList(),
+                        levelsSince = if (c.isNull(8)) null else c.getLong(8),
                     )
                 )
             }
@@ -212,11 +241,23 @@ class Db(context: Context) : SQLiteOpenHelper(context.applicationContext, "fernz
                 v.put("times", action.times)
                 v.put("position", index)
                 v.put("reminder_minutes", action.reminderMinutes)
+                v.put("levels_since", action.levelsSince)
+                val actionId: Long
                 if (action.id == 0L) {
                     v.put("created_day", action.createdDay)
-                    db.insertOrThrow("actions", null, v)
+                    actionId = db.insertOrThrow("actions", null, v)
                 } else {
+                    actionId = action.id
                     db.update("actions", v, "id = ?", arrayOf(action.id.toString()))
+                }
+                db.delete("levels", "action_id = ?", arrayOf(actionId.toString()))
+                action.levels.forEachIndexed { position, level ->
+                    val lv = ContentValues()
+                    lv.put("action_id", actionId)
+                    lv.put("position", position)
+                    lv.put("title", level.title)
+                    lv.put("length", level.length)
+                    db.insertOrThrow("levels", null, lv)
                 }
             }
 
